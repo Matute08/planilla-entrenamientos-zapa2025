@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 // Importa los componentes hijos
-import { Navbar } from "./Navbar"; // Asumiendo que tienes este archivo en src/Navbar.js
+import { Navbar } from "./navbar"; // Asumiendo que tienes este archivo en src/Navbar.js
 import Controls from "./controls";
 import FeedbackMessages from "./feedbackMessages";
 import LoadingIndicators from "./loadingIndicators";
