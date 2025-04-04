@@ -14,7 +14,7 @@ function Controls({
     const isLoadingAnything = loading || loadingRanking || loadingPaymentStatus;
 
     return (
-        <div className="mb-6 flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6">
+        <div className="mb-6 flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4">
             {/* Selector de Mes */}
             <div className="flex items-center space-x-2">
                 <label htmlFor="month-select" className="text-xl font-medium text-white"> Mes: </label>
@@ -29,22 +29,25 @@ function Controls({
                 </select>
                 <span className="text-xl font-semibold text-white"> {new Date().getFullYear()} </span>
             </div>
-            {/* Botón Ranking */}
-            <button
-                onClick={fetchRankingData}
-                disabled={isLoadingAnything}
-                className="px-4 py-2 bg-sky-700 text-white font-semibold rounded-md shadow hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {loadingRanking ? ( <SpinnerIcon /> ) : ( 'Ranking General' )}
-            </button>
-            {/* Botón Estado de Pagos */}
-            <button
-                onClick={fetchPaymentStatusData}
-                disabled={isLoadingAnything}
-                className="px-4 py-2 bg-red-400 text-white font-semibold rounded-md shadow hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {loadingPaymentStatus ? ( <SpinnerIcon /> ) : ( 'Pagos Pendientes' )}
-            </button>
+            {/* Botones */}
+            <div className="flex flex-row gap-2">
+                {/* Botón Ranking */}
+                <button
+                    onClick={fetchRankingData}
+                    disabled={isLoadingAnything}
+                    className="px-4 py-2 bg-sky-700 text-white font-semibold rounded-md shadow hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loadingRanking ? ( <SpinnerIcon /> ) : ( 'Ranking General' )}
+                </button>
+                {/* Botón Estado de Pagos */}
+                <button
+                    onClick={fetchPaymentStatusData}
+                    disabled={isLoadingAnything}
+                    className="px-4 py-2 bg-red-400 text-white font-semibold rounded-md shadow hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loadingPaymentStatus ? ( <SpinnerIcon /> ) : ( 'Pagos Pendientes' )}
+                </button>
+            </div>
         </div>
     );
 }

@@ -92,7 +92,7 @@ function PlanillaMasculino() {
         } catch (err) {
             console.error("Error fetching monthly data:", err);
             setError(
-                `Error al cargar datos para ${months[monthIndex]}: ${err.message}`
+                `Error al cargar datos para ${months[monthIndex]}: Verifique su conexión a Internet.`
             );
             setPlayers([]);
             setTrainingDates([]);

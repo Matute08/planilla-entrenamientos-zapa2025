@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// import PlanillaFemenino from "./planillaFem";
 import PlanillaMasculino from "./planilla";
+import PlanillaFemenino from "./planillaFem";
 import Home from "./home";
 function Main() {
     return (
@@ -11,10 +11,10 @@ function Main() {
                     path="/planillaMasculino"
                     element={<PlanillaMasculino />}
                 />
-                {/* <Route
+                <Route
                     path="/planillaFemenino"
                     element={<PlanillaFemenino />}
-                /> */}
+                />
             </Routes>
         </Router>
     );

@@ -9,16 +9,16 @@ function Home() {
                 Planilla de asistencia de Zapataye
             </h1>
             <button
-                className="bg-primary border-primary border rounded-md inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-[#1B44C8] hover:border-[#1B44C8] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#1B44C8] active:border-[#1B44C8]"
+                className="bg-primary border-primary border rounded-md inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-[#0369a1] hover:border-[#0369a1] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#0369a1] active:border-[#0369a1]"
                 onClick={() => navigate("/planillaMasculino")}
             >
                 Masculino
             </button>
 
             <button
-                className="bg-primary border-primary border rounded-md inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-[#1B44C8] hover:border-[#1B44C8] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#1B44C8] active:border-[#1B44C8]"
+                className="bg-primary border-primary border rounded-md inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-[#0369a1] hover:border-[#0369a1] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#0369a1] active:border-[#0369a1]"
                 onClick={() => navigate("/planillaFemenino")}
-                disabled={true}
+                
             >
                 Femenino
             </button>
