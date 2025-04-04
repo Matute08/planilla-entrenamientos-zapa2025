@@ -1,25 +1,27 @@
 {
-    "short_name": "Entrenamientos Zapa",
-    "name": "Planilla de Entrenamientos Zapa",
-    "icons": [
-      {
-        "src": "./zapapng.jpg", 
-        "sizes": "64x64 32x32 24x24 16x16",
-        "type": "image/x-icon"
-      },
-      {
-        "src": "./zapapng.jpg", 
-        "type": "image/png",
-        "sizes": "192x192"
-      },
-      {
-        "src": "./zapapng.jpg", 
-        "type": "image/png",
-        "sizes": "512x512"
-      }
-    ],
-    "start_url": ".",
-    "display": "standalone", 
-    "theme_color": "#000000", 
-    "background_color": "#ffffff"
-  }
+  "short_name": "Entrenamientos Zapa",
+  "name": "Asistencias de Entrenamientos Zapataye",
+  "icons": [
+    {
+      "src": "ZapatayeSinFondo.ico", 
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "ZapatayeSinFondo.png", 
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "ZapatayeSinFondo.png", 
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone", 
+  "theme_color": "#000000", 
+  "background_color": "#ffffff"
+}
