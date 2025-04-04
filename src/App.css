@@ -2,3 +2,13 @@
   margin: 0 auto;
   text-align: center;
 }
+
+.fondo {
+  background-color: black; 
+  background-image: linear-gradient(rgba(0, 0, 0, 0.966), rgba(0, 0, 0, 0.911)),
+  url('./assets/zapapng.jpg'); 
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+

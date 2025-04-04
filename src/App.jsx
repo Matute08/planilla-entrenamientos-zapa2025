@@ -1,14 +1,14 @@
+import Main from './components/main'
 import './App.css'
-import Planilla from './components/planilla'
 
 function App() {
 
 
   return (
-    <>
-     <Planilla></Planilla>
-    </>
-  )
+      <>
+          <Main />
+      </>
+  );
 }
 
 export default App
