@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-// Importa los componentes hijos
-import { Navbar } from "./navbar"; // Asumiendo que tienes este archivo en src/Navbar.js
+import { Navbar } from "./navbar"; 
 import Controls from "./controls";
 import FeedbackMessages from "./feedbackMessages";
 import LoadingIndicators from "./loadingIndicators";
@@ -25,7 +24,6 @@ const months = [
 
 // --- Componente Principal ---
 function PlanillaMasculino() {
-    // --- Estados (se mantienen en el componente principal) ---
     const [players, setPlayers] = useState([]);
     const [trainingDates, setTrainingDates] = useState([]);
     const [selectedMonthIndex, setSelectedMonthIndex] = useState(
@@ -42,8 +40,8 @@ function PlanillaMasculino() {
     const [showPaymentStatus, setShowPaymentStatus] = useState(false);
     const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
     const [paymentStatusError, setPaymentStatusError] = useState(null);
+    const [suspendedDates, setSuspendedDates] = useState([]);
 
-    // --- Funciones de Fetch y Update (se mantienen aquí) ---
     const fetchData = useCallback(async (monthIndex) => {
         if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
             setError(
@@ -81,10 +79,12 @@ function PlanillaMasculino() {
             if (
                 data &&
                 Array.isArray(data.players) &&
-                Array.isArray(data.trainingDates)
+                Array.isArray(data.trainingDates) &&
+                Array.isArray(data.suspendedDates)
             ) {
                 setPlayers(data.players);
                 setTrainingDates(data.trainingDates);
+                setSuspendedDates(data.suspendedDates); // Guarda el array de booleanos de suspensión
             } else {
                 console.error("Respuesta inesperada (mensual):", data);
                 throw new Error("Formato de datos mensual inesperado.");
@@ -92,14 +92,15 @@ function PlanillaMasculino() {
         } catch (err) {
             console.error("Error fetching monthly data:", err);
             setError(
-                `Error al cargar datos para ${months[monthIndex]}: Verifique su conexión a Internet.`
+                `Error al cargar datos para ${months[monthIndex]}: ${err.message}`
             );
             setPlayers([]);
             setTrainingDates([]);
+            setSuspendedDates([]); 
         } finally {
             setLoading(false);
         }
-    }, []); // No necesita dependencias externas si SCRIPT_URL y months son constantes globales
+    }, []); 
 
     const fetchRankingData = useCallback(async () => {
         if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
@@ -148,7 +149,7 @@ function PlanillaMasculino() {
         } finally {
             setLoadingRanking(false);
         }
-    }, []); // No necesita dependencias externas
+    }, []); 
 
     const fetchPaymentStatusData = useCallback(async () => {
         if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
@@ -231,6 +232,10 @@ function PlanillaMasculino() {
         }
         setMessage("Guardando...");
         setError(null);
+        let specificLoadingSetter = null;
+        if (payload.action === 'toggleSuspended') specificLoadingSetter = setLoading; // Reusa loading general o crea uno nuevo
+
+        if (specificLoadingSetter) specificLoadingSetter(true);
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
@@ -254,19 +259,45 @@ function PlanillaMasculino() {
                     result.message || "Error desconocido al guardar."
                 );
             }
-            showMessage("Cambio guardado con éxito.");
-            return true;
+            //Si la acción fue toggleSuspended, el script devuelve los datos actualizados del mes
+            if (payload.action === 'toggleSuspended' && result && Array.isArray(result.players) && Array.isArray(result.trainingDates) && Array.isArray(result.suspendedDates)) {
+                setPlayers(result.players);
+                setTrainingDates(result.trainingDates);
+                setSuspendedDates(result.suspendedDates);
+                showMessage("Estado de suspensión actualizado."); // Mensaje específico
+                return true; // Indica éxito
+            } else if (payload.action === 'attendance' || payload.action === 'payment') {
+                // Éxito para acciones normales
+                showMessage("Cambio guardado con éxito.");
+                return true; // Indica éxito
+            } else {
+                // Respuesta inesperada para toggleSuspended
+                throw new Error("Respuesta inesperada del servidor al cambiar suspensión.");
+            }
+            
         } catch (err) {
             console.error("Error updating data:", err);
-            setError(`Error al guardar: ${err.message}`);
-            showMessage("");
-            return false;
+            // Muestra el error específico de la acción si es posible
+            if (payload.action === 'toggleSuspended') {
+                setError(`Error al cambiar suspensión: ${err.message}`); // O un estado de error específico
+            } else {
+                setError(`Error al guardar (${payload.action}): ${err.message}`);
+            }
+            showMessage(''); // Limpia mensaje de éxito/guardando
+            return false; // Indica fallo
+        } finally {
+            if (specificLoadingSetter) specificLoadingSetter(false);
         }
     }, []); // No necesita dependencias externas
 
     // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
     const handleAttendanceChange = useCallback(
         async (playerId, dateIndex) => {
+            if (suspendedDates[dateIndex]) {
+            showMessage("No se puede cambiar la asistencia en un día suspendido.");
+            return;
+            }
+
             const originalPlayers = players.map((p) => ({
                 ...p,
                 attendance: [...p.attendance],
@@ -300,8 +331,23 @@ function PlanillaMasculino() {
                 setPlayers(originalPlayers);
             }
         },
-        [players, updateData, selectedMonthIndex]
-    ); // Depende de players, updateData, selectedMonthIndex
+        [players, updateData, selectedMonthIndex, suspendedDates]
+    ); 
+
+    const handleToggleSuspended = useCallback(async (dateIndex) => {
+        // Nota: No hacemos actualización optimista compleja aquí porque el script
+        // devuelve todos los datos actualizados (incluyendo players y suspendedDates).
+        // Simplemente llamamos a updateData.
+        await updateData({
+            action: 'toggleSuspended',
+            monthIndex: selectedMonthIndex,
+            dateIndex: dateIndex
+        });
+        // El estado se actualizará si la llamada a updateData tiene éxito
+        // y procesa la respuesta correctamente.
+
+    }, [selectedMonthIndex, updateData]); // Depende del mes y la función de update
+
 
     const handlePaymentChange = useCallback(
         async (playerId) => {
@@ -379,6 +425,7 @@ function PlanillaMasculino() {
                     handleMonthChange={handleMonthChange}
                     fetchRankingData={fetchRankingData}
                     fetchPaymentStatusData={fetchPaymentStatusData}
+                    
                     loading={loading}
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
@@ -429,11 +476,13 @@ function PlanillaMasculino() {
                     !loadingPaymentStatus && (
                         <MonthlyAttendanceTable
                             players={players}
+                            suspendedDates={suspendedDates}
+                            handleToggleSuspended={handleToggleSuspended}
                             trainingDates={trainingDates}
                             selectedMonthIndex={selectedMonthIndex}
                             months={months}
-                            handleAttendanceChange={handleAttendanceChange} // Pasa la función handler
-                            handlePaymentChange={handlePaymentChange} // Pasa la función handler
+                            handleAttendanceChange={handleAttendanceChange}
+                            handlePaymentChange={handlePaymentChange} 
                         />
                     )}
             </main>

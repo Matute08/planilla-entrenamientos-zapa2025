@@ -25,336 +25,383 @@ const months = [
 
 // --- Componente Principal ---
 function PlanillaFemenino() {
-    // --- Estados (se mantienen en el componente principal) ---
-    const [players, setPlayers] = useState([]);
-    const [trainingDates, setTrainingDates] = useState([]);
-    const [selectedMonthIndex, setSelectedMonthIndex] = useState(
-        new Date().getMonth()
-    );
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [message, setMessage] = useState("");
-    const [rankingData, setRankingData] = useState(null);
-    const [showRanking, setShowRanking] = useState(false);
-    const [loadingRanking, setLoadingRanking] = useState(false);
-    const [rankingError, setRankingError] = useState(null);
-    const [paymentStatusData, setPaymentStatusData] = useState(null);
-    const [showPaymentStatus, setShowPaymentStatus] = useState(false);
-    const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
-    const [paymentStatusError, setPaymentStatusError] = useState(null);
-
-    // --- Funciones de Fetch y Update (se mantienen aquí) ---
-    const fetchData = useCallback(async (monthIndex) => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            setLoading(false);
+     const [players, setPlayers] = useState([]);
+        const [trainingDates, setTrainingDates] = useState([]);
+        const [selectedMonthIndex, setSelectedMonthIndex] = useState(
+            new Date().getMonth()
+        );
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+        const [message, setMessage] = useState("");
+        const [rankingData, setRankingData] = useState(null);
+        const [showRanking, setShowRanking] = useState(false);
+        const [loadingRanking, setLoadingRanking] = useState(false);
+        const [rankingError, setRankingError] = useState(null);
+        const [paymentStatusData, setPaymentStatusData] = useState(null);
+        const [showPaymentStatus, setShowPaymentStatus] = useState(false);
+        const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
+        const [paymentStatusError, setPaymentStatusError] = useState(null);
+        const [suspendedDates, setSuspendedDates] = useState([]);
+    
+        const fetchData = useCallback(async (monthIndex) => {
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                setError(
+                    "Error: La URL de Google Apps Script no está configurada."
+                );
+                setLoading(false);
+                setPlayers([]);
+                setTrainingDates([]);
+                return;
+            }
+            setLoading(true);
+            setError(null);
+            setMessage("");
             setPlayers([]);
             setTrainingDates([]);
-            return;
-        }
-        setLoading(true);
-        setError(null);
-        setMessage("");
-        setPlayers([]);
-        setTrainingDates([]);
-        try {
-            const url = `${SCRIPT_URL}?monthIndex=${monthIndex}`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
+            try {
+                const url = `${SCRIPT_URL}?monthIndex=${monthIndex}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
                 }
-                throw new Error(errorMsg);
-            }
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(
-                    data.message || "Error desconocido desde Apps Script."
-                );
-            }
-            if (
-                data &&
-                Array.isArray(data.players) &&
-                Array.isArray(data.trainingDates)
-            ) {
-                setPlayers(data.players);
-                setTrainingDates(data.trainingDates);
-            } else {
-                console.error("Respuesta inesperada (mensual):", data);
-                throw new Error("Formato de datos mensual inesperado.");
-            }
-        } catch (err) {
-            console.error("Error fetching monthly data:", err);
-            setError(
-                `Error al cargar datos para ${months[monthIndex]}: Verifique su conexión a Internet.`
-            );
-            setPlayers([]);
-            setTrainingDates([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []); // No necesita dependencias externas si SCRIPT_URL y months son constantes globales
-
-    const fetchRankingData = useCallback(async () => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setRankingError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            return;
-        }
-        setLoadingRanking(true);
-        setRankingError(null);
-        setRankingData(null);
-        setMessage("");
-        setShowPaymentStatus(false);
-        setPaymentStatusError(null);
-        setPaymentStatusData(null);
-        try {
-            const url = `${SCRIPT_URL}?action=getRanking`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(
+                        data.message || "Error desconocido desde Apps Script."
+                    );
                 }
-                throw new Error(errorMsg);
-            }
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(
-                    data.message || "Error desconocido al obtener ranking."
-                );
-            }
-            if (data && Array.isArray(data.ranking)) {
-                setRankingData(data.ranking);
-                setShowRanking(true);
-            } else {
-                console.error("Respuesta inesperada (ranking):", data);
-                throw new Error("Formato de datos de ranking inesperado.");
-            }
-        } catch (err) {
-            console.error("Error fetching ranking data:", err);
-            setRankingError(`Error al cargar el ranking: ${err.message}`);
-            setShowRanking(false);
-        } finally {
-            setLoadingRanking(false);
-        }
-    }, []); // No necesita dependencias externas
-
-    const fetchPaymentStatusData = useCallback(async () => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setPaymentStatusError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            return;
-        }
-        setLoadingPaymentStatus(true);
-        setPaymentStatusError(null);
-        setPaymentStatusData(null);
-        setMessage("");
-        setShowRanking(false);
-        setRankingError(null);
-        setRankingData(null);
-        try {
-            const url = `${SCRIPT_URL}?action=getPaymentStatus`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
+                if (
+                    data &&
+                    Array.isArray(data.players) &&
+                    Array.isArray(data.trainingDates) &&
+                    Array.isArray(data.suspendedDates)
+                ) {
+                    setPlayers(data.players);
+                    setTrainingDates(data.trainingDates);
+                    setSuspendedDates(data.suspendedDates); // Guarda el array de booleanos de suspensión
+                } else {
+                    console.error("Respuesta inesperada (mensual):", data);
+                    throw new Error("Formato de datos mensual inesperado.");
                 }
-                throw new Error(errorMsg);
-            }
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(
-                    data.message ||
-                        "Error desconocido al obtener estado de pagos."
+            } catch (err) {
+                console.error("Error fetching monthly data:", err);
+                setError(
+                    `Error al cargar datos para ${months[monthIndex]}: ${err.message}`
                 );
+                setPlayers([]);
+                setTrainingDates([]);
+                setSuspendedDates([]); 
+            } finally {
+                setLoading(false);
             }
-            if (data && Array.isArray(data.paymentStatus)) {
-                setPaymentStatusData(data.paymentStatus);
-                setShowPaymentStatus(true);
-            } else {
-                console.error("Respuesta inesperada (pagos):", data);
-                throw new Error(
-                    "Formato de datos de estado de pago inesperado."
+        }, []); 
+    
+        const fetchRankingData = useCallback(async () => {
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                setRankingError(
+                    "Error: La URL de Google Apps Script no está configurada."
                 );
+                return;
             }
-        } catch (err) {
-            console.error("Error fetching payment status data:", err);
-            setPaymentStatusError(
-                `Error al cargar estado de pagos: ${err.message}`
-            );
+            setLoadingRanking(true);
+            setRankingError(null);
+            setRankingData(null);
+            setMessage("");
             setShowPaymentStatus(false);
-        } finally {
-            setLoadingPaymentStatus(false);
-        }
-    }, []); // No necesita dependencias externas
-
-    useEffect(() => {
-        if (
-            !showRanking &&
-            !showPaymentStatus &&
-            !loadingRanking &&
-            !loadingPaymentStatus
-        ) {
-            fetchData(selectedMonthIndex);
-        }
-    }, [
-        selectedMonthIndex,
-        fetchData,
-        showRanking,
-        showPaymentStatus,
-        loadingRanking,
-        loadingPaymentStatus,
-    ]);
-
-    const updateData = useCallback(async (payload) => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            return false;
-        }
-        setMessage("Guardando...");
-        setError(null);
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                redirect: "follow",
-                body: JSON.stringify(payload),
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-            });
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
+            setPaymentStatusError(null);
+            setPaymentStatusData(null);
+            try {
+                const url = `${SCRIPT_URL}?action=getRanking`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
                 }
-                throw new Error(errorMsg);
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(
+                        data.message || "Error desconocido al obtener ranking."
+                    );
+                }
+                if (data && Array.isArray(data.ranking)) {
+                    setRankingData(data.ranking);
+                    setShowRanking(true);
+                } else {
+                    console.error("Respuesta inesperada (ranking):", data);
+                    throw new Error("Formato de datos de ranking inesperado.");
+                }
+            } catch (err) {
+                console.error("Error fetching ranking data:", err);
+                setRankingError(`Error al cargar el ranking: ${err.message}`);
+                setShowRanking(false);
+            } finally {
+                setLoadingRanking(false);
             }
-            const result = await response.json();
-            if (result.error) {
-                throw new Error(
-                    result.message || "Error desconocido al guardar."
+        }, []); 
+    
+        const fetchPaymentStatusData = useCallback(async () => {
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                setPaymentStatusError(
+                    "Error: La URL de Google Apps Script no está configurada."
                 );
+                return;
             }
-            showMessage("Cambio guardado con éxito.");
-            return true;
-        } catch (err) {
-            console.error("Error updating data:", err);
-            setError(`Error al guardar: ${err.message}`);
-            showMessage("");
-            return false;
-        }
-    }, []); // No necesita dependencias externas
-
-    // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
-    const handleAttendanceChange = useCallback(
-        async (playerId, dateIndex) => {
-            const originalPlayers = players.map((p) => ({
-                ...p,
-                attendance: [...p.attendance],
-            }));
-            setPlayers((prevPlayers) =>
-                prevPlayers.map((player) =>
-                    player.id === playerId
-                        ? {
-                              ...player,
-                              attendance: player.attendance.map((att, idx) =>
-                                  idx === dateIndex ? !att : att
-                              ),
-                          }
-                        : player
-                )
-            );
-            const player = originalPlayers.find((p) => p.id === playerId);
-            if (!player) return;
-            const newValue = !player.attendance[dateIndex];
-            const success = await updateData({
-                action: "attendance",
-                playerId: playerId,
-                monthIndex: selectedMonthIndex,
-                dateIndex: dateIndex,
-                value: newValue,
-            });
-            if (!success) {
-                showMessage(
-                    "Error al guardar asistencia, revirtiendo cambio local."
+            setLoadingPaymentStatus(true);
+            setPaymentStatusError(null);
+            setPaymentStatusData(null);
+            setMessage("");
+            setShowRanking(false);
+            setRankingError(null);
+            setRankingData(null);
+            try {
+                const url = `${SCRIPT_URL}?action=getPaymentStatus`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
+                }
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(
+                        data.message ||
+                            "Error desconocido al obtener estado de pagos."
+                    );
+                }
+                if (data && Array.isArray(data.paymentStatus)) {
+                    setPaymentStatusData(data.paymentStatus);
+                    setShowPaymentStatus(true);
+                } else {
+                    console.error("Respuesta inesperada (pagos):", data);
+                    throw new Error(
+                        "Formato de datos de estado de pago inesperado."
+                    );
+                }
+            } catch (err) {
+                console.error("Error fetching payment status data:", err);
+                setPaymentStatusError(
+                    `Error al cargar estado de pagos: ${err.message}`
                 );
-                setPlayers(originalPlayers);
+                setShowPaymentStatus(false);
+            } finally {
+                setLoadingPaymentStatus(false);
             }
-        },
-        [players, updateData, selectedMonthIndex]
-    ); // Depende de players, updateData, selectedMonthIndex
-
-    const handlePaymentChange = useCallback(
-        async (playerId) => {
-            const originalPlayers = players.map((p) => ({ ...p }));
-            setPlayers((prevPlayers) =>
-                prevPlayers.map((player) =>
-                    player.id === playerId
-                        ? { ...player, paid: !player.paid }
-                        : player
-                )
-            );
-            const player = originalPlayers.find((p) => p.id === playerId);
-            if (!player) return;
-            const newValue = !player.paid;
-            const success = await updateData({
-                action: "payment",
-                playerId: playerId,
+        }, []); // No necesita dependencias externas
+    
+        useEffect(() => {
+            if (
+                !showRanking &&
+                !showPaymentStatus &&
+                !loadingRanking &&
+                !loadingPaymentStatus
+            ) {
+                fetchData(selectedMonthIndex);
+            }
+        }, [
+            selectedMonthIndex,
+            fetchData,
+            showRanking,
+            showPaymentStatus,
+            loadingRanking,
+            loadingPaymentStatus,
+        ]);
+    
+        const updateData = useCallback(async (payload) => {
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                setError(
+                    "Error: La URL de Google Apps Script no está configurada."
+                );
+                return false;
+            }
+            setMessage("Guardando...");
+            setError(null);
+            let specificLoadingSetter = null;
+            if (payload.action === 'toggleSuspended') specificLoadingSetter = setLoading; // Reusa loading general o crea uno nuevo
+    
+            if (specificLoadingSetter) specificLoadingSetter(true);
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    body: JSON.stringify(payload),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                });
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
+                }
+                const result = await response.json();
+                if (result.error) {
+                    throw new Error(
+                        result.message || "Error desconocido al guardar."
+                    );
+                }
+                //Si la acción fue toggleSuspended, el script devuelve los datos actualizados del mes
+                if (payload.action === 'toggleSuspended' && result && Array.isArray(result.players) && Array.isArray(result.trainingDates) && Array.isArray(result.suspendedDates)) {
+                    setPlayers(result.players);
+                    setTrainingDates(result.trainingDates);
+                    setSuspendedDates(result.suspendedDates);
+                    showMessage("Estado de suspensión actualizado."); // Mensaje específico
+                    return true; // Indica éxito
+                } else if (payload.action === 'attendance' || payload.action === 'payment') {
+                    // Éxito para acciones normales
+                    showMessage("Cambio guardado con éxito.");
+                    return true; // Indica éxito
+                } else {
+                    // Respuesta inesperada para toggleSuspended
+                    throw new Error("Respuesta inesperada del servidor al cambiar suspensión.");
+                }
+                
+            } catch (err) {
+                console.error("Error updating data:", err);
+                // Muestra el error específico de la acción si es posible
+                if (payload.action === 'toggleSuspended') {
+                    setError(`Error al cambiar suspensión: ${err.message}`); // O un estado de error específico
+                } else {
+                    setError(`Error al guardar (${payload.action}): ${err.message}`);
+                }
+                showMessage(''); // Limpia mensaje de éxito/guardando
+                return false; // Indica fallo
+            } finally {
+                if (specificLoadingSetter) specificLoadingSetter(false);
+            }
+        }, []); // No necesita dependencias externas
+    
+        // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
+        const handleAttendanceChange = useCallback(
+            async (playerId, dateIndex) => {
+                if (suspendedDates[dateIndex]) {
+                showMessage("No se puede cambiar la asistencia en un día suspendido.");
+                return;
+                }
+    
+                const originalPlayers = players.map((p) => ({
+                    ...p,
+                    attendance: [...p.attendance],
+                }));
+                setPlayers((prevPlayers) =>
+                    prevPlayers.map((player) =>
+                        player.id === playerId
+                            ? {
+                                  ...player,
+                                  attendance: player.attendance.map((att, idx) =>
+                                      idx === dateIndex ? !att : att
+                                  ),
+                              }
+                            : player
+                    )
+                );
+                const player = originalPlayers.find((p) => p.id === playerId);
+                if (!player) return;
+                const newValue = !player.attendance[dateIndex];
+                const success = await updateData({
+                    action: "attendance",
+                    playerId: playerId,
+                    monthIndex: selectedMonthIndex,
+                    dateIndex: dateIndex,
+                    value: newValue,
+                });
+                if (!success) {
+                    showMessage(
+                        "Error al guardar asistencia, revirtiendo cambio local."
+                    );
+                    setPlayers(originalPlayers);
+                }
+            },
+            [players, updateData, selectedMonthIndex, suspendedDates]
+        ); 
+    
+        const handleToggleSuspended = useCallback(async (dateIndex) => {
+            // Nota: No hacemos actualización optimista compleja aquí porque el script
+            // devuelve todos los datos actualizados (incluyendo players y suspendedDates).
+            // Simplemente llamamos a updateData.
+            await updateData({
+                action: 'toggleSuspended',
                 monthIndex: selectedMonthIndex,
-                value: newValue,
+                dateIndex: dateIndex
             });
-            if (!success) {
-                showMessage("Error al guardar pago, revirtiendo cambio local.");
-                setPlayers(originalPlayers);
-            }
-        },
-        [players, updateData, selectedMonthIndex]
-    ); // Depende de players, updateData, selectedMonthIndex
-
-    const handleMonthChange = (event) => {
-        const newMonthIndex = parseInt(event.target.value, 10);
-        setSelectedMonthIndex(newMonthIndex);
-        setShowRanking(false);
-        setRankingError(null);
-        setRankingData(null);
-        setShowPaymentStatus(false);
-        setPaymentStatusError(null);
-        setPaymentStatusData(null);
-    };
-
-    const showMessage = (msg) => {
-        setMessage(msg);
-        setTimeout(() => {
-            setMessage((prev) => (prev === msg ? "" : prev));
-        }, 3000);
-    };
-
-    const closeSpecialSections = () => {
-        setShowRanking(false);
-        setShowPaymentStatus(false);
-        setRankingError(null);
-        setPaymentStatusError(null);
-        // fetchData(selectedMonthIndex); // Descomenta si quieres recargar mes al cerrar
-    };
+            // El estado se actualizará si la llamada a updateData tiene éxito
+            // y procesa la respuesta correctamente.
+    
+        }, [selectedMonthIndex, updateData]); // Depende del mes y la función de update
+    
+    
+        const handlePaymentChange = useCallback(
+            async (playerId) => {
+                const originalPlayers = players.map((p) => ({ ...p }));
+                setPlayers((prevPlayers) =>
+                    prevPlayers.map((player) =>
+                        player.id === playerId
+                            ? { ...player, paid: !player.paid }
+                            : player
+                    )
+                );
+                const player = originalPlayers.find((p) => p.id === playerId);
+                if (!player) return;
+                const newValue = !player.paid;
+                const success = await updateData({
+                    action: "payment",
+                    playerId: playerId,
+                    monthIndex: selectedMonthIndex,
+                    value: newValue,
+                });
+                if (!success) {
+                    showMessage("Error al guardar pago, revirtiendo cambio local.");
+                    setPlayers(originalPlayers);
+                }
+            },
+            [players, updateData, selectedMonthIndex]
+        ); // Depende de players, updateData, selectedMonthIndex
+    
+        const handleMonthChange = (event) => {
+            const newMonthIndex = parseInt(event.target.value, 10);
+            setSelectedMonthIndex(newMonthIndex);
+            setShowRanking(false);
+            setRankingError(null);
+            setRankingData(null);
+            setShowPaymentStatus(false);
+            setPaymentStatusError(null);
+            setPaymentStatusData(null);
+        };
+    
+        const showMessage = (msg) => {
+            setMessage(msg);
+            setTimeout(() => {
+                setMessage((prev) => (prev === msg ? "" : prev));
+            }, 3000);
+        };
+    
+        const closeSpecialSections = () => {
+            setShowRanking(false);
+            setShowPaymentStatus(false);
+            setRankingError(null);
+            setPaymentStatusError(null);
+            // fetchData(selectedMonthIndex); // Descomenta si quieres recargar mes al cerrar
+        };
 
     // --- Renderizado Principal usando Componentes Hijos ---
     return (
@@ -379,6 +426,7 @@ function PlanillaFemenino() {
                     handleMonthChange={handleMonthChange}
                     fetchRankingData={fetchRankingData}
                     fetchPaymentStatusData={fetchPaymentStatusData}
+                    
                     loading={loading}
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
@@ -429,11 +477,13 @@ function PlanillaFemenino() {
                     !loadingPaymentStatus && (
                         <MonthlyAttendanceTable
                             players={players}
+                            suspendedDates={suspendedDates}
+                            handleToggleSuspended={handleToggleSuspended}
                             trainingDates={trainingDates}
                             selectedMonthIndex={selectedMonthIndex}
                             months={months}
-                            handleAttendanceChange={handleAttendanceChange} // Pasa la función handler
-                            handlePaymentChange={handlePaymentChange} // Pasa la función handler
+                            handleAttendanceChange={handleAttendanceChange}
+                            handlePaymentChange={handlePaymentChange} 
                         />
                     )}
             </main>
