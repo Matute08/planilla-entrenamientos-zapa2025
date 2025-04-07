@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Navbar } from "./navbar"; 
+import Navbar from "./navbar"; // Importa el componente de navegación
+import Swal from "sweetalert2"; // Importa SweetAlert2 para mostrar alertas
 import Controls from "./controls";
 import FeedbackMessages from "./feedbackMessages";
 import LoadingIndicators from "./loadingIndicators";
@@ -7,6 +8,7 @@ import RankingSection from "./rankingSection";
 import PaymentStatusSection from "./paymentStatusSection";
 import MonthlyAttendanceTable from "./monthlyAttendanceTable";
 import Footer from "./footer";
+import SpinnerIcon from "./spinnerIcon";
 
 // --- Constantes ---
 // URL de tu Google Apps Script
@@ -42,71 +44,194 @@ function PlanillaMasculino() {
     const [paymentStatusError, setPaymentStatusError] = useState(null);
     const [suspendedDates, setSuspendedDates] = useState([]);
 
-    const fetchData = useCallback(async (monthIndex) => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            setLoading(false);
+    // --- Funciones de Fetch (GET) ---
+    const fetchData = useCallback(
+        async (monthIndex, suppressLoading = false) => {
+            // Limpia errores específicos al iniciar fetch
+            setRankingError(null);
+            setPaymentStatusError(null);
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                Swal.fire("Error", "URL del script no configurada", "error");
+                setLoading(false);
+                setPlayers([]);
+                setTrainingDates([]);
+                setSuspendedDates([]);
+                return;
+            }
+            if (!suppressLoading) setLoading(true);
+            setMessage("");
             setPlayers([]);
             setTrainingDates([]);
-            return;
-        }
-        setLoading(true);
-        setError(null);
-        setMessage("");
-        setPlayers([]);
-        setTrainingDates([]);
-        try {
-            const url = `${SCRIPT_URL}?monthIndex=${monthIndex}`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
+            setSuspendedDates([]);
+            try {
+                const url = `${SCRIPT_URL}?monthIndex=${monthIndex}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
                 }
-                throw new Error(errorMsg);
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.message || "Error desconocido.");
+                }
+                if (
+                    data &&
+                    Array.isArray(data.players) &&
+                    Array.isArray(data.trainingDates) &&
+                    Array.isArray(data.suspendedDates)
+                ) {
+                    setPlayers(data.players);
+                    setTrainingDates(data.trainingDates);
+                    setSuspendedDates(data.suspendedDates);
+                } else {
+                    console.error("Respuesta inesperada (mensual):", data);
+                    throw new Error("Formato datos mensual inesperado.");
+                }
+            } catch (err) {
+                console.error("Error fetching monthly data:", err);
+                // Muestra error con SweetAlert
+                Swal.fire({
+                    icon: "error",
+                    title: "Error al cargar datos",
+                    text: `Mes: ${months[monthIndex]}. Detalle: ${err.message}`,
+                });
+                setPlayers([]);
+                setTrainingDates([]);
+                setSuspendedDates([]);
+            } finally {
+                if (!suppressLoading) setLoading(false);
             }
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(
-                    data.message || "Error desconocido desde Apps Script."
-                );
+        },
+        []
+    );
+
+    // --- Función Genérica para Acciones (POST) ---
+    const performAction = useCallback(
+        async (action, payload, showLoadingAlert = false) => {
+            // Renombrado showOverlay a showLoadingAlert
+            if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
+                Swal.fire("Error", "URL script no configurada", "error");
+                return null;
             }
-            if (
-                data &&
-                Array.isArray(data.players) &&
-                Array.isArray(data.trainingDates) &&
-                Array.isArray(data.suspendedDates)
-            ) {
-                setPlayers(data.players);
-                setTrainingDates(data.trainingDates);
-                setSuspendedDates(data.suspendedDates); // Guarda el array de booleanos de suspensión
-            } else {
-                console.error("Respuesta inesperada (mensual):", data);
-                throw new Error("Formato de datos mensual inesperado.");
+
+            // Muestra alerta de carga si es una acción pesada
+            if (showLoadingAlert) {
+                Swal.fire({
+                    title: "Procesando...",
+                    text: "Por favor espera.",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading(); // Muestra el icono de carga
+                    },
+                });
             }
-        } catch (err) {
-            console.error("Error fetching monthly data:", err);
-            setError(
-                `Error al cargar datos para ${months[monthIndex]}: ${err.message}`
-            );
-            setPlayers([]);
-            setTrainingDates([]);
-            setSuspendedDates([]); 
-        } finally {
-            setLoading(false);
-        }
-    }, []); 
+            // Limpia errores específicos
+            // setMessage(''); // No limpiar mensaje aquí para permitir "Guardando..." previo para acciones menores
+            setRankingError(null);
+            setPaymentStatusError(null);
+
+            const fullPayload = {
+                ...payload,
+                action,
+                monthIndex: selectedMonthIndex,
+            };
+            let success = false; // Variable para saber si la acción tuvo éxito
+            let resultData = null; // Para guardar los datos de respuesta
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    body: JSON.stringify(fullPayload),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                });
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || errorMsg;
+                    } catch {
+                        // Intentionally left empty
+                    }
+                    throw new Error(errorMsg);
+                }
+                const result = await response.json();
+                if (result.error) {
+                    throw new Error(result.message || `Error: ${action}`);
+                }
+
+                // Guarda el resultado y marca éxito
+                resultData = result;
+                success = true;
+
+                // Actualiza estado local si el script devolvió datos (acciones pesadas y toggleSuspended)
+                if (
+                    result &&
+                    Array.isArray(result.players) &&
+                    Array.isArray(result.trainingDates) &&
+                    Array.isArray(result.suspendedDates)
+                ) {
+                    setPlayers(result.players);
+                    setTrainingDates(result.trainingDates);
+                    setSuspendedDates(result.suspendedDates);
+                } else if (
+                    result.success &&
+                    !["attendance", "payment"].includes(action)
+                ) {
+                    // Si solo devolvió éxito para una acción mayor (raro), refrescar por si acaso
+                    fetchData(selectedMonthIndex, true);
+                }
+                // Para acciones menores (attendance, payment), la UI ya se actualizó optimistamente
+            } catch (err) {
+                console.error(`Error performing action ${action}:`, err);
+                // Cierra el Swal de carga si estaba abierto ANTES de mostrar el error
+                if (showLoadingAlert) {
+                    Swal.close();
+                }
+                // Muestra error con SweetAlert
+                Swal.fire({
+                    icon: "error",
+                    title: `Error al ${action}`,
+                    text:  "Ocurrió un error.",
+                });
+                return null; // Indica fallo
+            } finally {
+                // No necesitamos setLoadingAction(false)
+            }
+
+            // Si la acción fue exitosa
+            if (success) {
+                const successMessage = `Acción completada con éxito.`;
+                if (showLoadingAlert) {
+                    // Si mostramos alerta de carga, la cerramos y mostramos alerta de éxito
+                    Swal.fire({
+                        icon: "success",
+                        title: successMessage,
+                        timer: 1500, // Cierre automático
+                        showConfirmButton: false,
+                    });
+                } else {
+                    // Si fue acción menor, mostramos toast de éxito usando setMessage
+                    setMessage(successMessage);
+                }
+                return resultData; // Devuelve resultado en éxito
+            }
+        },
+        [selectedMonthIndex, fetchData]
+    );
 
     const fetchRankingData = useCallback(async () => {
+        // Limpia errores específicos
+        setError(null);
+        setPaymentStatusError(null);
         if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setRankingError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
+            Swal.fire("Error", "URL del script no configurada", "error");
             return;
         }
         setLoadingRanking(true);
@@ -114,7 +239,6 @@ function PlanillaMasculino() {
         setRankingData(null);
         setMessage("");
         setShowPaymentStatus(false);
-        setPaymentStatusError(null);
         setPaymentStatusData(null);
         try {
             const url = `${SCRIPT_URL}?action=getRanking`;
@@ -131,31 +255,35 @@ function PlanillaMasculino() {
             }
             const data = await response.json();
             if (data.error) {
-                throw new Error(
-                    data.message || "Error desconocido al obtener ranking."
-                );
+                throw new Error("Error al obtener ranking.");
             }
             if (data && Array.isArray(data.ranking)) {
                 setRankingData(data.ranking);
                 setShowRanking(true);
             } else {
                 console.error("Respuesta inesperada (ranking):", data);
-                throw new Error("Formato de datos de ranking inesperado.");
+                throw new Error("Formato datos ranking inesperado.");
             }
         } catch (err) {
             console.error("Error fetching ranking data:", err);
-            setRankingError(`Error al cargar el ranking: ${err.message}`);
+            setRankingError(`Error al cargar ranking: ${err.message}`); // Guarda error específico
+            Swal.fire(
+                "Error",
+                `No se pudo cargar el ranking: ${err.message}`,
+                "error"
+            ); // Muestra alerta
             setShowRanking(false);
         } finally {
             setLoadingRanking(false);
         }
-    }, []); 
+    }, []);
 
     const fetchPaymentStatusData = useCallback(async () => {
+        // Limpia errores específicos
+        setError(null);
+        setRankingError(null);
         if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setPaymentStatusError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
+            Swal.fire("Error", "URL del script no configurada", "error");
             return;
         }
         setLoadingPaymentStatus(true);
@@ -163,7 +291,6 @@ function PlanillaMasculino() {
         setPaymentStatusData(null);
         setMessage("");
         setShowRanking(false);
-        setRankingError(null);
         setRankingData(null);
         try {
             const url = `${SCRIPT_URL}?action=getPaymentStatus`;
@@ -180,32 +307,32 @@ function PlanillaMasculino() {
             }
             const data = await response.json();
             if (data.error) {
-                throw new Error(
-                    data.message ||
-                        "Error desconocido al obtener estado de pagos."
-                );
+                throw new Error("Error al obtener pagos.");
             }
             if (data && Array.isArray(data.paymentStatus)) {
                 setPaymentStatusData(data.paymentStatus);
                 setShowPaymentStatus(true);
             } else {
                 console.error("Respuesta inesperada (pagos):", data);
-                throw new Error(
-                    "Formato de datos de estado de pago inesperado."
-                );
+                throw new Error("Formato datos pagos inesperado.");
             }
         } catch (err) {
             console.error("Error fetching payment status data:", err);
-            setPaymentStatusError(
-                `Error al cargar estado de pagos: ${err.message}`
-            );
+            setPaymentStatusError(`Error al cargar pagos: ${err.message}`); // Guarda error específico
+            Swal.fire(
+                "Error",
+                `No se pudo cargar el estado de pagos: ${err.message}`,
+                "error"
+            ); // Muestra alerta
             setShowPaymentStatus(false);
         } finally {
             setLoadingPaymentStatus(false);
         }
-    }, []); // No necesita dependencias externas
+    }, []);
 
+    // --- Efecto para cargar datos mensuales iniciales ---
     useEffect(() => {
+        // Carga inicial o al cambiar de mes si no hay secciones especiales activas/cargando
         if (
             !showRanking &&
             !showPaymentStatus &&
@@ -223,158 +350,120 @@ function PlanillaMasculino() {
         loadingPaymentStatus,
     ]);
 
-    const updateData = useCallback(async (payload) => {
-        if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-            setError(
-                "Error: La URL de Google Apps Script no está configurada."
-            );
-            return false;
-        }
-        setMessage("Guardando...");
-        setError(null);
-        let specificLoadingSetter = null;
-        if (payload.action === 'toggleSuspended') specificLoadingSetter = setLoading; // Reusa loading general o crea uno nuevo
-
-        if (specificLoadingSetter) specificLoadingSetter(true);
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                redirect: "follow",
-                body: JSON.stringify(payload),
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-            });
-            if (!response.ok) {
-                let errorMsg = `Error ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    // Intentionally left empty
-                }
-                throw new Error(errorMsg);
-            }
-            const result = await response.json();
-            if (result.error) {
-                throw new Error(
-                    result.message || "Error desconocido al guardar."
-                );
-            }
-            //Si la acción fue toggleSuspended, el script devuelve los datos actualizados del mes
-            if (payload.action === 'toggleSuspended' && result && Array.isArray(result.players) && Array.isArray(result.trainingDates) && Array.isArray(result.suspendedDates)) {
-                setPlayers(result.players);
-                setTrainingDates(result.trainingDates);
-                setSuspendedDates(result.suspendedDates);
-                showMessage("Estado de suspensión actualizado."); // Mensaje específico
-                return true; // Indica éxito
-            } else if (payload.action === 'attendance' || payload.action === 'payment') {
-                // Éxito para acciones normales
-                showMessage("Cambio guardado con éxito.");
-                return true; // Indica éxito
-            } else {
-                // Respuesta inesperada para toggleSuspended
-                throw new Error("Respuesta inesperada del servidor al cambiar suspensión.");
-            }
-            
-        } catch (err) {
-            console.error("Error updating data:", err);
-            // Muestra el error específico de la acción si es posible
-            if (payload.action === 'toggleSuspended') {
-                setError(`Error al cambiar suspensión: ${err.message}`); // O un estado de error específico
-            } else {
-                setError(`Error al guardar (${payload.action}): ${err.message}`);
-            }
-            showMessage(''); // Limpia mensaje de éxito/guardando
-            return false; // Indica fallo
-        } finally {
-            if (specificLoadingSetter) specificLoadingSetter(false);
-        }
-    }, []); // No necesita dependencias externas
-
     // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
     const handleAttendanceChange = useCallback(
         async (playerId, dateIndex) => {
             if (suspendedDates[dateIndex]) {
-            showMessage("No se puede cambiar la asistencia en un día suspendido.");
-            return;
+                setMessage("Día suspendido.");
+                return;
             }
-
             const originalPlayers = players.map((p) => ({
                 ...p,
                 attendance: [...p.attendance],
             }));
+            const playerIndex = originalPlayers.findIndex(
+                (p) => p.id === playerId
+            );
+            if (playerIndex === -1) return;
+            const previousValue =
+                originalPlayers[playerIndex].attendance[dateIndex];
+            const newValue =
+                typeof previousValue === "boolean" ? !previousValue : true;
             setPlayers((prevPlayers) =>
-                prevPlayers.map((player) =>
-                    player.id === playerId
+                prevPlayers.map((p) =>
+                    p.id === playerId
                         ? {
-                              ...player,
-                              attendance: player.attendance.map((att, idx) =>
-                                  idx === dateIndex ? !att : att
+                              ...p,
+                              attendance: p.attendance.map((att, idx) =>
+                                  idx === dateIndex ? newValue : att
                               ),
                           }
-                        : player
+                        : p
                 )
             );
-            const player = originalPlayers.find((p) => p.id === playerId);
-            if (!player) return;
-            const newValue = !player.attendance[dateIndex];
-            const success = await updateData({
-                action: "attendance",
-                playerId: playerId,
-                monthIndex: selectedMonthIndex,
-                dateIndex: dateIndex,
-                value: newValue,
-            });
-            if (!success) {
-                showMessage(
-                    "Error al guardar asistencia, revirtiendo cambio local."
-                );
+            setMessage("Guardando asistencia..."); // Para toast
+            const successResult = await performAction(
+                "attendance",
+                { playerId, dateIndex, value: newValue },
+                false
+            ); // false = no alert de carga
+            if (successResult === null) {
+                console.log("Reverting attendance");
+                setMessage("");
                 setPlayers(originalPlayers);
             }
         },
-        [players, updateData, selectedMonthIndex, suspendedDates]
-    ); 
-
-    const handleToggleSuspended = useCallback(async (dateIndex) => {
-        // Nota: No hacemos actualización optimista compleja aquí porque el script
-        // devuelve todos los datos actualizados (incluyendo players y suspendedDates).
-        // Simplemente llamamos a updateData.
-        await updateData({
-            action: 'toggleSuspended',
-            monthIndex: selectedMonthIndex,
-            dateIndex: dateIndex
-        });
-        // El estado se actualizará si la llamada a updateData tiene éxito
-        // y procesa la respuesta correctamente.
-
-    }, [selectedMonthIndex, updateData]); // Depende del mes y la función de update
-
+        [players, performAction, suspendedDates]
+    );
+    const handleToggleSuspended = useCallback(
+        async (dateIndex) => {
+            const originalSuspendedDates = [...suspendedDates];
+            const originalPlayers = players.map((p) => ({
+                ...p,
+                attendance: [...p.attendance],
+            }));
+            const newSuspendedState = !originalSuspendedDates[dateIndex];
+            setSuspendedDates((prevDates) =>
+                prevDates.map((suspended, idx) =>
+                    idx === dateIndex ? !suspended : suspended
+                )
+            );
+            setPlayers((prevPlayers) =>
+                prevPlayers.map((player) => ({
+                    ...player,
+                    attendance: player.attendance.map((att, idx) =>
+                        idx === dateIndex && newSuspendedState
+                            ? "suspended"
+                            : idx === dateIndex && !newSuspendedState
+                            ? originalPlayers.find((op) => op.id === player.id)
+                                  ?.attendance[idx] ?? false
+                            : att
+                    ),
+                }))
+            );
+            setMessage("Actualizando suspensión..."); // Para toast
+            const successResult = await performAction(
+                "toggleSuspended",
+                { dateIndex },
+                false
+            ); // false = no alert de carga
+            if (successResult === null) {
+                console.log("Reverting suspension");
+                setMessage("");
+                setSuspendedDates(originalSuspendedDates);
+                setPlayers(originalPlayers);
+            }
+        },
+        [suspendedDates, players, performAction]
+    );
 
     const handlePaymentChange = useCallback(
         async (playerId) => {
             const originalPlayers = players.map((p) => ({ ...p }));
+            const playerIndex = originalPlayers.findIndex(
+                (p) => p.id === playerId
+            );
+            if (playerIndex === -1) return;
+            const newValue = !originalPlayers[playerIndex].paid;
             setPlayers((prevPlayers) =>
-                prevPlayers.map((player) =>
-                    player.id === playerId
-                        ? { ...player, paid: !player.paid }
-                        : player
+                prevPlayers.map((p) =>
+                    p.id === playerId ? { ...p, paid: newValue } : p
                 )
             );
-            const player = originalPlayers.find((p) => p.id === playerId);
-            if (!player) return;
-            const newValue = !player.paid;
-            const success = await updateData({
-                action: "payment",
-                playerId: playerId,
-                monthIndex: selectedMonthIndex,
-                value: newValue,
-            });
-            if (!success) {
-                showMessage("Error al guardar pago, revirtiendo cambio local.");
+            setMessage("Guardando pago..."); // Para toast
+            const successResult = await performAction(
+                "payment",
+                { playerId, value: newValue },
+                false
+            ); // false = no alert de carga
+            if (successResult === null) {
+                console.log("Reverting payment");
+                setMessage("");
                 setPlayers(originalPlayers);
             }
         },
-        [players, updateData, selectedMonthIndex]
-    ); // Depende de players, updateData, selectedMonthIndex
+        [players, performAction]
+    );
 
     const handleMonthChange = (event) => {
         const newMonthIndex = parseInt(event.target.value, 10);
@@ -386,13 +475,74 @@ function PlanillaMasculino() {
         setPaymentStatusError(null);
         setPaymentStatusData(null);
     };
+    // --- Manejadores para Acciones de Jugador (Usan SweetAlert) ---
+    const handleAddPlayer = useCallback(async () => {
+        const { value: playerName } = await Swal.fire({
+            title: "Agregar Jugador",
+            input: "text",
+            inputLabel: "Nombre",
+            showCancelButton: true,
+            confirmButtonText: "Agregar",
+            cancelButtonText: "Cancelar",
+            inputValidator: (v) =>
+                !v || !v.trim() ? "Escriba un nombre" : null,
+        });
+        if (playerName) {
+            await performAction(
+                "addPlayer",
+                { playerName: playerName.trim() },
+                true
+            ); // true = SÍ alert de carga
+        }
+    }, [performAction]);
 
-    const showMessage = (msg) => {
-        setMessage(msg);
-        setTimeout(() => {
-            setMessage((prev) => (prev === msg ? "" : prev));
-        }, 3000);
-    };
+    const handleDeletePlayer = useCallback(
+        async (playerId, playerName) => {
+            const result = await Swal.fire({
+                title: "¿Eliminar?",
+                html: `Eliminar a <strong>${playerName}</strong> de <u>TODAS</u> las hojas?`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar",
+            });
+            if (result.isConfirmed) {
+                await performAction("deletePlayer", { playerId }, true); // true = SÍ alert de carga
+            }
+        },
+        [performAction]
+    );
+
+    const handleUpdatePlayerName = useCallback(
+        async (playerId, currentName) => {
+            const { value: newName } = await Swal.fire({
+                title: "Editar Nombre",
+                input: "text",
+                inputLabel: `Nuevo nombre para ${currentName}`,
+                inputValue: currentName,
+                showCancelButton: true,
+                confirmButtonText: "Guardar",
+                cancelButtonText: "Cancelar",
+                inputValidator: (v) =>
+                    !v || !v.trim()
+                        ? "Nombre vacío"
+                        : v.trim() === currentName
+                        ? "Nombre igual al actual"
+                        : null,
+            });
+            if (newName && newName.trim() !== currentName) {
+                await performAction(
+                    "updatePlayerName",
+                    { playerId, newName: newName.trim() },
+                    true
+                ); // true = SÍ alert de carga
+            }
+        },
+        [performAction]
+    );
+
+    // Removed unused showMessage function
 
     const closeSpecialSections = () => {
         setShowRanking(false);
@@ -409,7 +559,7 @@ function PlanillaMasculino() {
             <header className="text-white py-3 flex flex-col items-center px-4">
                 <div className="bg-black text-white text-start py-2 w-full">
                     {" "}
-                    <Navbar />{" "}
+                    <Navbar onAddPlayer={handleAddPlayer} />{" "}
                 </div>
                 <h1 className="text-3xl font-bold text-center mt-4 ">
                     {" "}
@@ -425,11 +575,11 @@ function PlanillaMasculino() {
                     handleMonthChange={handleMonthChange}
                     fetchRankingData={fetchRankingData}
                     fetchPaymentStatusData={fetchPaymentStatusData}
-                    
                     loading={loading}
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
                     months={months}
+                    //onAddPlayer={handleAddPlayer} // Pasa la función si el botón está en Controls
                 />
 
                 {/* Componente de Mensajes de Feedback */}
@@ -476,13 +626,15 @@ function PlanillaMasculino() {
                     !loadingPaymentStatus && (
                         <MonthlyAttendanceTable
                             players={players}
-                            suspendedDates={suspendedDates}
-                            handleToggleSuspended={handleToggleSuspended}
                             trainingDates={trainingDates}
+                            suspendedDates={suspendedDates}
                             selectedMonthIndex={selectedMonthIndex}
                             months={months}
                             handleAttendanceChange={handleAttendanceChange}
-                            handlePaymentChange={handlePaymentChange} 
+                            handlePaymentChange={handlePaymentChange}
+                            handleToggleSuspended={handleToggleSuspended}
+                            handleDeletePlayer={handleDeletePlayer}
+                            handleUpdatePlayerName={handleUpdatePlayerName}
                         />
                     )}
             </main>

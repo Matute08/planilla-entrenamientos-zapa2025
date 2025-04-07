@@ -1,5 +1,5 @@
 import React from "react";
-import { FaFutbol , FaBan  } from "react-icons/fa"; // Ejemplo con react-icons
+import { FaFutbol, FaBan } from "react-icons/fa"; // Ejemplo con react-icons
 // Componente para mostrar la tabla de asistencia mensual
 function MonthlyAttendanceTable({
     players,
@@ -10,6 +10,8 @@ function MonthlyAttendanceTable({
     handleToggleSuspended,
     handleAttendanceChange, // Recibe la función para manejar el cambio
     handlePaymentChange, // Recibe la función para manejar el cambio
+    handleDeletePlayer,
+    handleUpdatePlayerName,
 }) {
     return (
         <>
@@ -35,7 +37,16 @@ function MonthlyAttendanceTable({
                 ) : (
                     <table className="min-w-full divide-y divide-zinc-950">
                         <thead className="bg-blue-300">
-                            <tr >
+                            <tr>
+                                {/*Columna Acciones (Sticky)** */}
+                                <th
+                                    scope="col"
+                                    className="px-2 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 left-0 bg-blue-300 z-30"
+                                >
+                                    {" "}
+                                    
+                                    Acciones
+                                </th>
                                 <th
                                     scope="col"
                                     className="px-6 py-3 text-xs font-bold text-stone-950 uppercase tracking-wider sticky left-0 top-0 bg-blue-300 z-30 "
@@ -111,6 +122,66 @@ function MonthlyAttendanceTable({
                                     key={player.id}
                                     className="hover:bg-gray-50"
                                 >
+                                    {/*Celda Acciones (Sticky Izquierda)** */}
+                                    <td className="px-2 py-4 whitespace-nowrap text-sm font-medium sticky left-0 bg-white hover:bg-gray-50 z-10">
+                                        <div className="flex justify-center items-center space-x-1">
+                                            {/* Botón Editar */}
+                                            <button
+                                                onClick={() =>
+                                                    handleUpdatePlayerName(
+                                                        player.id,
+                                                        player.name
+                                                    )
+                                                }
+                                                className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-100" 
+                                                title="Editar nombre"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    className="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth={2}
+                                                >
+                                                    {" "}
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                                    />{" "}
+                                                </svg>
+                                            </button>
+                                            {/* Botón Eliminar: Llama al handler pasado por props */}
+                                            <button
+                                                onClick={() =>
+                                                    handleDeletePlayer(
+                                                        player.id,
+                                                        player.name
+                                                    )
+                                                }
+                                                className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100" // Añadido padding/hover bg
+                                                title="Eliminar jugador"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    className="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth={2}
+                                                >
+                                                    {" "}
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                    />{" "}
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+
                                     {/* Celda Nombre */}
                                     <td className="px-6 py-4 whitespace-nowrap  text-sm font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10">
                                         {" "}
