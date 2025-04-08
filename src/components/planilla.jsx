@@ -21,7 +21,8 @@ const months = [
     "Marzo",
     "Abril",
     "Mayo",
-    "Junio" /* ...otros meses */,
+    "Junio",
+    "Julio" /* ...otros meses */,
 ];
 
 // --- Componente Principal ---
@@ -198,7 +199,7 @@ function PlanillaMasculino() {
                 Swal.fire({
                     icon: "error",
                     title: `Error al ${action}`,
-                    text:  "Ocurrió un error.",
+                    text: "Ocurrió un error.",
                 });
                 return null; // Indica fallo
             } finally {
@@ -351,6 +352,7 @@ function PlanillaMasculino() {
     ]);
 
     // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
+
     const handleAttendanceChange = useCallback(
         async (playerId, dateIndex) => {
             if (suspendedDates[dateIndex]) {
@@ -395,6 +397,92 @@ function PlanillaMasculino() {
         },
         [players, performAction, suspendedDates]
     );
+
+    const handleAddTrainingDate = useCallback(async () => {
+        const { value: dateValue } = await Swal.fire({
+            title: `Agregar Entrenamiento (${months[selectedMonthIndex]})`,
+            // Usa el input tipo 'date' del navegador
+            input: "date",
+            inputLabel: "Seleccione la fecha",
+            // Podrías limitar las fechas al mes actual si quisieras con min/max
+            // inputAttributes: {
+            //     min: '2024-05-01', // Ejemplo: Primero de mayo
+            //     max: '2024-05-31'  // Ejemplo: Último de mayo
+            // },
+            showCancelButton: true,
+            confirmButtonText: "Agregar Fecha",
+            cancelButtonText: "Cancelar",
+            inputValidator: (value) => {
+                if (!value) {
+                    return "¡Necesita seleccionar una fecha!";
+                }
+                // Validación opcional: Asegurar que la fecha pertenezca al mes seleccionado
+                const selectedDate = new Date(value + "T00:00:00"); // Asegura parseo correcto
+                if (selectedDate.getMonth() !== selectedMonthIndex) {
+                    return `La fecha debe pertenecer a ${months[selectedMonthIndex]}`;
+                }
+                // Validación opcional: Asegurar que no sea una fecha futura (si se requiere)
+                // const today = new Date(); today.setHours(0,0,0,0);
+                // if (selectedDate > today) {
+                //     return 'No puede seleccionar una fecha futura.';
+                // }
+                // Validación opcional: Asegurar que no exista ya (requiere leer trainingDates)
+                if (trainingDates.includes(value)) {
+                    return "Esta fecha ya existe.";
+                }
+            },
+        });
+
+        // Si el usuario ingresó una fecha válida y confirmó
+        if (dateValue) {
+            // Llama a performAction con la nueva acción y la fecha en formato YYYY-MM-DD
+            await performAction(
+                "addTrainingDate",
+                { newDateString: dateValue },
+                true
+            ); // true para alerta de carga
+        }
+    }, [performAction, selectedMonthIndex, trainingDates]);
+
+    const handleDeleteTrainingDate = useCallback(async () => {
+        if (!trainingDates || trainingDates.length === 0) {
+            Swal.fire('Info', 'No hay fechas de entrenamiento para eliminar en este mes.', 'info');
+            return;
+        }
+
+        // Crear opciones para el select de Swal
+        const dateOptions = {};
+        trainingDates.forEach(dateYYYYMMDD => {
+            try {
+                // Muestra DD/MM al usuario, pero el valor interno es YYYY-MM-DD
+                const displayDate = new Date(dateYYYYMMDD + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                dateOptions[dateYYYYMMDD] = displayDate; // key: YYYY-MM-DD, value: DD/MM
+            } catch {
+                 dateOptions[dateYYYYMMDD] = dateYYYYMMDD; // Fallback si falla el formato
+            }
+        });
+
+        const { value: dateToDelete } = await Swal.fire({
+            title: `Eliminar Entrenamiento (${months[selectedMonthIndex]})`,
+            input: 'select',
+            inputOptions: dateOptions,
+            inputPlaceholder: 'Seleccione una fecha',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar Fecha',
+            confirmButtonColor: '#d33',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) {
+                    return '¡Necesita seleccionar una fecha para eliminar!'
+                }
+            }
+        });
+
+        if (dateToDelete) { // dateToDelete será el valor YYYY-MM-DD seleccionado
+            await performAction('deleteTrainingDate', { dateToDeleteString: dateToDelete }, true); // true para alerta de carga
+        }
+    }, [performAction, selectedMonthIndex, trainingDates]); 
+
     const handleToggleSuspended = useCallback(
         async (dateIndex) => {
             const originalSuspendedDates = [...suspendedDates];
@@ -559,7 +647,11 @@ function PlanillaMasculino() {
             <header className="text-white py-3 flex flex-col items-center px-4">
                 <div className="bg-black text-white text-start py-2 w-full">
                     {" "}
-                    <Navbar onAddPlayer={handleAddPlayer} />{" "}
+                    <Navbar
+                        onAddPlayer={handleAddPlayer}
+                        onAddTrainingDate={handleAddTrainingDate}
+                        onDeleteTrainingDate={handleDeleteTrainingDate}
+                    />{" "}
                 </div>
                 <h1 className="text-3xl font-bold text-center mt-4 ">
                     {" "}
@@ -579,6 +671,7 @@ function PlanillaMasculino() {
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
                     months={months}
+
                     //onAddPlayer={handleAddPlayer} // Pasa la función si el botón está en Controls
                 />
 

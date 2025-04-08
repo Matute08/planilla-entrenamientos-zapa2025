@@ -10,6 +10,7 @@ function Controls({
     loadingRanking,
     loadingPaymentStatus,
     months,
+    // onAddTrainingDate,
    // onAddPlayer,
 }) {
     const isLoadingAnything = loading || loadingRanking || loadingPaymentStatus;
@@ -55,6 +56,14 @@ function Controls({
                 className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                Agregar Jugador
+            </button> */}
+            {/* **NUEVO: Botón Agregar Entrenamiento** */}
+            {/* <button
+                onClick={onAddTrainingDate} // Llama a la función pasada por props
+                disabled={isLoadingAnything}
+                className="px-4 py-2 bg-cyan-600 text-white font-semibold rounded-md shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+               Agregar Entrenamiento
             </button> */}
             </div>
         </div>
