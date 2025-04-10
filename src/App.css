@@ -5,7 +5,7 @@
 
 .fondo {
   background-color: black; 
-  background-image: linear-gradient(rgba(0, 0, 0, 0.966), rgba(0, 0, 0, 0.911)),
+  background-image: linear-gradient(rgba(0, 0, 0, 0.90), rgba(0, 0, 0, 0.90)),
   url('./assets/zapapng.jpg'); 
   background-size: contain;
   background-position: center;

@@ -15,14 +15,18 @@ import SpinnerIcon from "./spinnerIcon";
 const SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbygckn2NLCu0z7XvSbi1HtqOWdfdxX7QzhkwypKc20FEP4rr4Tcj9rvugrZHQTBpfQ2/exec";
 // Meses (puedes mover esto a un archivo de constantes si prefieres)
-const months = [
+const ALL_MONTH_NAMES = [
     "Enero",
     "Febrero",
     "Marzo",
     "Abril",
     "Mayo",
     "Junio",
-    "Julio" /* ...otros meses */,
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre"  /* ...otros meses */,
 ];
 
 // --- Componente Principal ---
@@ -44,6 +48,10 @@ function PlanillaMasculino() {
     const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
     const [paymentStatusError, setPaymentStatusError] = useState(null);
     const [suspendedDates, setSuspendedDates] = useState([]);
+    // Derivar los meses disponibles para el dropdown
+    const currentActualMonthIndex = new Date().getMonth(); // 0-11
+    // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
+    const availableMonths = ALL_MONTH_NAMES.slice(0, currentActualMonthIndex + 1);
 
     // --- Funciones de Fetch (GET) ---
     const fetchData = useCallback(
@@ -100,7 +108,7 @@ function PlanillaMasculino() {
                 Swal.fire({
                     icon: "error",
                     title: "Error al cargar datos",
-                    text: `Mes: ${months[monthIndex]}. Detalle: ${err.message}`,
+                    text: `Mes: ${ALL_MONTH_NAMES[monthIndex]}. Detalle: ${err.message}`,
                 });
                 setPlayers([]);
                 setTrainingDates([]);
@@ -400,7 +408,7 @@ function PlanillaMasculino() {
 
     const handleAddTrainingDate = useCallback(async () => {
         const { value: dateValue } = await Swal.fire({
-            title: `Agregar Entrenamiento (${months[selectedMonthIndex]})`,
+            title: `Agregar Entrenamiento (${ALL_MONTH_NAMES[selectedMonthIndex]})`,
             // Usa el input tipo 'date' del navegador
             input: "date",
             inputLabel: "Seleccione la fecha",
@@ -419,7 +427,7 @@ function PlanillaMasculino() {
                 // Validación opcional: Asegurar que la fecha pertenezca al mes seleccionado
                 const selectedDate = new Date(value + "T00:00:00"); // Asegura parseo correcto
                 if (selectedDate.getMonth() !== selectedMonthIndex) {
-                    return `La fecha debe pertenecer a ${months[selectedMonthIndex]}`;
+                    return `La fecha debe pertenecer a ${ALL_MONTH_NAMES[selectedMonthIndex]}`;
                 }
                 // Validación opcional: Asegurar que no sea una fecha futura (si se requiere)
                 // const today = new Date(); today.setHours(0,0,0,0);
@@ -463,7 +471,7 @@ function PlanillaMasculino() {
         });
 
         const { value: dateToDelete } = await Swal.fire({
-            title: `Eliminar Entrenamiento (${months[selectedMonthIndex]})`,
+            title: `Eliminar Entrenamiento (${ALL_MONTH_NAMES[selectedMonthIndex]})`,
             input: 'select',
             inputOptions: dateOptions,
             inputPlaceholder: 'Seleccione una fecha',
@@ -587,8 +595,8 @@ function PlanillaMasculino() {
     const handleDeletePlayer = useCallback(
         async (playerId, playerName) => {
             const result = await Swal.fire({
-                title: "¿Eliminar?",
-                html: `Eliminar a <strong>${playerName}</strong> de <u>TODAS</u> las hojas?`,
+                title: "¿Seguro desea eliminar?",
+                html: `¿Eliminar a <u><strong>${playerName}</strong></u>?`,
                 icon: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#d33",
@@ -670,7 +678,7 @@ function PlanillaMasculino() {
                     loading={loading}
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
-                    months={months}
+                    months={availableMonths}
 
                     //onAddPlayer={handleAddPlayer} // Pasa la función si el botón está en Controls
                 />
@@ -689,7 +697,7 @@ function PlanillaMasculino() {
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
                     selectedMonthIndex={selectedMonthIndex}
-                    months={months}
+                    months={ALL_MONTH_NAMES}
                 />
 
                 {/* Componente de Ranking (Condicional) */}
@@ -722,7 +730,7 @@ function PlanillaMasculino() {
                             trainingDates={trainingDates}
                             suspendedDates={suspendedDates}
                             selectedMonthIndex={selectedMonthIndex}
-                            months={months}
+                            months={ALL_MONTH_NAMES}
                             handleAttendanceChange={handleAttendanceChange}
                             handlePaymentChange={handlePaymentChange}
                             handleToggleSuspended={handleToggleSuspended}

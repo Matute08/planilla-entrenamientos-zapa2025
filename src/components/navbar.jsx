@@ -61,7 +61,7 @@ function Navbar({
                 </button>
 
                 {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                    <div className="absolute right-0 mt-2 w-48 bg-white border font-bold border-gray-200 rounded-xl shadow-lg z-1000">
                         <button
                             className="block w-full px-4 py-2 text-left text-black text-m hover:bg-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2"
                             onClick={() => {
@@ -101,7 +101,7 @@ function Navbar({
                             </button>
 
                             {trainingDropdownOpen && (
-                                <div className="absolute left-0 mt-2 w-full bg-gray-200 border border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="absolute left-0 mt-2 w-full font-medium bg-gray-200 border border-gray-700 rounded-md shadow-lg z-20">
                                     <button
                                         className="block w-full px-4 py-2 text-left text-black text-m hover:bg-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2"
                                         onClick={() => {
@@ -111,7 +111,7 @@ function Navbar({
                                         }}
                                         disabled={isLoadingAnything}
                                     >
-                                        Nuevo Entrenamiento
+                                        Nuevo 
                                     </button>
                                     <hr className="border-gray-600" />
                                     <button
@@ -123,7 +123,7 @@ function Navbar({
                                         }}
                                         disabled={isLoadingAnything}
                                     >
-                                        Eliminar Entrenamiento
+                                        Eliminar 
                                     </button>
                                 </div>
                             )}
