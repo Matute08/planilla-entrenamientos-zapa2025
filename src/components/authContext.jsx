@@ -23,7 +23,9 @@ export const AuthProvider = ({ children }) => {
     const [showLoginModal, setShowLoginModal] = useState(false);
     // Función para verificar si un email está autorizado
     const checkAuthorization = (email) => {
-        return EDITORES_AUTORIZADOS.includes(email.toLowerCase());
+        const isAuth = EDITORES_AUTORIZADOS.includes(email.toLowerCase());
+       
+        return isAuth;
     };
 
     // Función para procesar el login exitoso de Google
@@ -51,9 +53,10 @@ export const AuthProvider = ({ children }) => {
                         name,
                         picture,
                         idToken,
-                        isAuthorized,
+                        isAuthorized: authorized,
                     })
-                ); // Guarda en LocalStorage
+                );
+               
             } else {
                 console.error("No se pudo obtener el email del token.");
                 handleLogout(); // Limpia si hay error
@@ -102,19 +105,16 @@ export const AuthProvider = ({ children }) => {
         if (storedData) {
             try {
                 const parsedData = JSON.parse(storedData);
-                // Opcional: Verificar si el token aún es válido aquí si quieres más seguridad
-                // const decoded = jwtDecode(parsedData.idToken);
-                // if (decoded.exp * 1000 > Date.now()) { ... }
-
                 setUserProfile({
                     email: parsedData.email,
                     name: parsedData.name,
                     picture: parsedData.picture,
-                    idToken: parsedData.idToken, // Recupera el token
+                    idToken: parsedData.idToken, // Guarda el token (posiblemente expirado)
                 });
                 setIsAuthenticated(true);
-                setIsAuthorized(parsedData.isAuthorized); // Recupera el estado de autorización
+                setIsAuthorized(parsedData.isAuthorized); // Confía en el estado guardado
                 setIsGuest(false);
+               
             } catch (error) {
                 console.error(
                     "Error al parsear datos de LocalStorage, limpiando:",

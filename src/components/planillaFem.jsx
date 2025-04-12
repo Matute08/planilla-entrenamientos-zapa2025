@@ -44,10 +44,9 @@ function PlanillaFemenino() {
         idToken,
         handleLogout,
         setShowLoginModal,
+        isLoadingAuth,
     } = useAuth(); // Obtiene estado y token de AuthContext
 
-    // Determina si el usuario tiene permisos de edición REALES
-    const isEditor = isAuthenticated && isAuthorized && !isGuest;
     const logoutAndRedirect = () => {
         handleLogout(); // Llama a la función original del contexto
         navigate("/"); // Redirige a la página principal
@@ -72,6 +71,7 @@ function PlanillaFemenino() {
     const [suspendedDates, setSuspendedDates] = useState([]);
     // Derivar los meses disponibles para el dropdown
     const currentActualMonthIndex = new Date().getMonth(); // 0-11
+
     // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
     const availableMonths = ALL_MONTH_NAMES.slice(
         0,
@@ -148,7 +148,7 @@ function PlanillaFemenino() {
     // --- Función Genérica para Acciones (POST) ---
     const performAction = useCallback(
         async (action, payload, showLoadingAlert = false) => {
-            // VERIFICA SI ES UNA ACCIÓN DE ESCRITURA Y SI EL USUARIO ES EDITOR AUTENTICADO
+            const currentIsEditor = isAuthenticated && isAuthorized && !isGuest;
             const writeActions = [
                 "attendance",
                 "payment",
@@ -159,18 +159,18 @@ function PlanillaFemenino() {
                 "addTrainingDate",
                 "deleteTrainingDate",
             ];
-            if (writeActions.includes(action) && !isEditor) {
+            if (writeActions.includes(action) && !currentIsEditor) {
                 console.warn(
-                    "Intento de acción de escritura denegado para usuario no autorizado."
+                    `>>> performAction: Write action '${action}' denied based on RECALCULATED editor status=false.`
                 );
                 Swal.fire(
                     "Acción no permitida",
-                    "Necesitas iniciar sesión como profesor autorizado para realizar cambios.",
+                    "Necesitas iniciar sesión como profesor autorizado.",
                     "warning"
                 );
-                return null; // No continuar si no es editor
+                return null;
             }
-
+            const requiresToken = writeActions.includes(action);
             // Renombrado showOverlay a showLoadingAlert
             if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
                 Swal.fire("Error", "URL script no configurada", "error");
@@ -197,10 +197,10 @@ function PlanillaFemenino() {
                 ...payload,
                 action,
                 monthIndex: selectedMonthIndex,
-                ...(writeActions.includes(action) && idToken
-                    ? { idToken }
-                    : {}),
+                ...(requiresToken && idToken ? { idToken } : {}),
             };
+           
+
             let success = false; // Variable para saber si la acción tuvo éxito
             let resultData = null; // Para guardar los datos de respuesta
 
@@ -283,7 +283,14 @@ function PlanillaFemenino() {
                 return resultData; // Devuelve resultado en éxito
             }
         },
-        [selectedMonthIndex, fetchData, isEditor, idToken]
+        [
+            selectedMonthIndex,
+            fetchData,
+            idToken,
+            isAuthenticated,
+            isAuthorized,
+            isGuest,
+        ]
     );
 
     const fetchRankingData = useCallback(async () => {
@@ -449,7 +456,7 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-                console.log("Reverting attendance");
+               
                 setMessage("");
                 setPlayers(originalPlayers);
             }
@@ -589,7 +596,7 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-                console.log("Reverting suspension");
+                
                 setMessage("");
                 setSuspendedDates(originalSuspendedDates);
                 setPlayers(originalPlayers);
@@ -618,7 +625,7 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-                console.log("Reverting payment");
+                
                 setMessage("");
                 setPlayers(originalPlayers);
             }
@@ -711,6 +718,17 @@ function PlanillaFemenino() {
         // fetchData(selectedMonthIndex); // Descomenta si quieres recargar mes al cerrar
     };
 
+    //Mostrar Carga si el estado de Auth aún no está listo**
+    if (isLoadingAuth) {
+        return (
+            <div className="flex flex-col min-h-screen fondo font-sans justify-center items-center">
+                <SpinnerIcon />
+                <span className="ml-2 text-white">
+                    Cargando datos de usuario...
+                </span>
+            </div>
+        );
+    }
     // --- Renderizado Principal usando Componentes Hijos ---
     return (
         <div className="flex flex-col h-screen fondo font-sans ">
@@ -728,7 +746,7 @@ function PlanillaFemenino() {
                     <div className="absolute top-4 right-4 z-50">
                         <button
                             onClick={() => setShowLoginModal(true)} // Abre el modal global
-                            className="text-lg bg-primary border-black  border rounded-full inline-flex items-center justify-left py-3 px-2 text-center mt-1 transition duration-150 ease-in-out shadow bg-blue-600 hover:bg-blue-700"
+                            className="text-lg bg-primary border-black  border rounded-full inline-flex items-center justify-left py-3 px-1 text-center mt-1 transition duration-150 ease-in-out shadow bg-blue-600 hover:bg-blue-700"
                         >
                             Iniciar Sesión
                         </button>
@@ -741,7 +759,7 @@ function PlanillaFemenino() {
                         onAddPlayer={handleAddPlayer}
                         onAddTrainingDate={handleAddTrainingDate}
                         onDeleteTrainingDate={handleDeleteTrainingDate}
-                        isEditor={isEditor} // Pasa el estado de editor
+                        isEditor={isAuthenticated && isAuthorized && !isGuest}
                         loading={loading}
                         loadingRanking={loadingRanking}
                         loadingPaymentStatus={loadingPaymentStatus}
@@ -820,7 +838,9 @@ function PlanillaFemenino() {
                             handleToggleSuspended={handleToggleSuspended}
                             handleDeletePlayer={handleDeletePlayer}
                             handleUpdatePlayerName={handleUpdatePlayerName}
-                            isEditor={isEditor} // Pasa el estado de editor
+                            isAuthenticated={isAuthenticated}
+                            isAuthorized={isAuthorized}
+                            isGuest={isGuest}
                         />
                     )}
             </main>

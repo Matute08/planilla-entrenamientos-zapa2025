@@ -31,10 +31,10 @@ function Navbar({
     }, []);
 
     return (
-        <div className="flex items-center  rounded-lg shadow-lg gap-2">
+        <div className="flex items-center  rounded-lg shadow-lg gap-3">
             <div>
                 <button
-                    className="text-lg bg-primary border-primary border rounded-full inline-flex items-center justify-left py-3 px-7 text-center text-white hover:bg-[#464749] hover:border-[#464749] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#464749] active:border-[#464749]"
+                    className="text-lg bg-primary border-primary border rounded-full inline-flex items-center justify-left py-3 px-5 text-center text-white hover:bg-[#464749] hover:border-[#464749] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#464749] active:border-[#464749]"
                     onClick={() => navigate("/")}
                 >
                     Inicio
@@ -44,7 +44,7 @@ function Navbar({
             <div className="relative inline-block text-left">
                 <button
                     
-                    className={`text-lg bg-primary borderprimary border rounded-full inline-flex items-center justify-center py-3 px-7 text-center text-white hover:bg-[#464749] hover:border[#464749] active:bg-[#464749] active:border-[#464749] transition duration-150 ease-in-out ${
+                    className={`text-lg bg-primary borderprimary border rounded-full inline-flex items-center justify-center py-3 px-3 text-center text-white hover:bg-[#464749] hover:border[#464749] active:bg-[#464749] active:border-[#464749] transition duration-150 ease-in-out ${
                         actionButtonsDisabled
                             ? "opacity-50 cursor-not-allowed bg-gray-500 border-gray-500 hover:bg-gray-500"
                             : ""

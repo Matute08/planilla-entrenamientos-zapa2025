@@ -12,8 +12,12 @@ function MonthlyAttendanceTable({
     handlePaymentChange, // Recibe la función para manejar el cambio
     handleDeletePlayer,
     handleUpdatePlayerName,
-    isEditor,
+    isAuthenticated,
+    isAuthorized,
+    isGuest
 }) {
+    const isEditor = isAuthenticated && isAuthorized && !isGuest;
+   
     return (
         <>
             {/* Título del mes */}
@@ -23,51 +27,31 @@ function MonthlyAttendanceTable({
             </h2>
             {/* Tabla */}
 
+            {/* Contenedor de la tabla */}
             <div className="overflow-x-auto bg-white rounded-lg shadow-md">
-                {/* Mensaje si no hay jugadores */}
-                {players.length === 0 ? (
-                    <tr>
-                        <td
-                            colSpan={trainingDates.length + 2}
-                            className="px-6 py-4 text-center fond-bold text-lg text-stone-900"
-                        >
-                            En {months[selectedMonthIndex]} no hubo
-                            entrenamientos.
-                        </td>
-                    </tr>
-                ) : (
-                    <table className="min-w-full divide-y divide-zinc-950">
+                {/* Renderiza la tabla SOLO si hay jugadores** */}
+                {players && players.length > 0 ? (
+                    <table className="min-w-full divide-y divide-zinc-950 relative">
                         <thead className="bg-blue-300">
                             <tr>
-                                {isEditor && (
-                                    <th
-                                        scope="col"
-                                        className="px-2 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 left-0 bg-blue-300 z-30"
-                                    >
-                                        {" "}
-                                        Acciones
-                                    </th>
-                                )}
-                                <th
-                                    scope="col"
-                                    className={`px-6 py-3 text-xs font-bold text-stone-950 uppercase tracking-wider sticky left-0 top-0 bg-blue-300 z-30 ${
-                                        isEditor
-                                            ? "left-[calc(3rem+1px)]"
-                                            : "left-0"
-                                    }`}
-                                >
-                                    {" "}
-                                    Jugador{" "}
+                            {isEditor && (
+                                <th scope="col" className="px-2 py-3 text-center text-xs font-bold text-black uppercase tracking-wider sticky top-0 left-0 bg-blue-300 z-30 align-bottom">
+                                    Acciones
                                 </th>
-                                {/* Mapea las fechas de entrenamiento para los encabezados */}
+                             )}
+                            {/* Columna Jugador (Ajusta 'left' si Acciones está presente) */}
+                            <th scope="col" className={`px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider sticky top-0 bg-blue-300 z-30 align-bottom left-0`}>
+                                Jugador
+                            </th>
                                 {trainingDates.map((date, index) => (
                                     <th
                                         key={index}
                                         scope="col"
-                                        className="px-6 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20 "
+                                        className="px-4 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20"
+                                       
                                     >
                                         <div>
-                                            {/* Formatea la fecha */}
+                                            {/* ... formato fecha ... */}
                                             {(() => {
                                                 try {
                                                     return new Date(
@@ -85,54 +69,72 @@ function MonthlyAttendanceTable({
                                             })()}
                                         </div>
                                         {/* Botón Suspender/Reactivar */}
-                                        <button
-                                            onClick={() =>
-                                                handleToggleSuspended(index)
-                                            }
-                                            title={
-                                                suspendedDates[index]
-                                                    ? "Reactivar entrenamiento"
-                                                    : "Suspender entrenamiento"
-                                            }
-                                            disabled={!isEditor}
-                                            className={`mt-1 px-1 py-0.5 text-xs rounded ${
-                                                suspendedDates[index]
-                                                    ? "bg-green-500 hover:bg-green-600 text-stone-900"
-                                                    : "bg-red-500 hover:bg-red-600 text-white"
-                                            }${
-                                                !isEditor
-                                                    ? "opacity-50 cursor-not-allowed"
-                                                    : ""
-                                            }`}
-                                        >
-                                            {suspendedDates[index] ? (
-                                                <FaFutbol size=".7em" />
-                                            ) : (
-                                                <FaBan size=".7em" />
+                                        {isEditor && (
+                                            <button
+                                                onClick={() =>
+                                                    handleToggleSuspended(index)
+                                                }
+                                                title={
+                                                    suspendedDates[index]
+                                                        ? "Reactivar entrenamiento"
+                                                        : "Suspender entrenamiento"
+                                                }
+                                                disabled={!isEditor}
+                                                className={`mt-1 px-1 py-0.5 text-xs rounded ${
+                                                    suspendedDates[index]
+                                                        ? "bg-green-500 hover:bg-green-600 text-stone-900"
+                                                        : "bg-red-500 hover:bg-red-600 text-white"
+                                                } ${
+                                                    !isEditor
+                                                        ? "opacity-50 cursor-not-allowed"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {suspendedDates[index] ? (
+                                                    <FaFutbol size=".7em" />
+                                                ) : (
+                                                    <FaBan size=".7em" />
+                                                )}
+                                            </button>
+                                        )}
+                                        {/* ... iconos si no es editor ... */}
+                                        {!isEditor && suspendedDates[index] && (
+                                            <FaBan
+                                                size=".7em"
+                                                className="text-gray-400 mx-auto mt-1"
+                                                title="Suspendido"
+                                            />
+                                        )}
+                                        {!isEditor &&
+                                            !suspendedDates[index] && (
+                                                <FaFutbol
+                                                    size=".7em"
+                                                    className="text-gray-400 mx-auto mt-1"
+                                                    title="Activo"
+                                                />
                                             )}
-                                        </button>
                                     </th>
                                 ))}
                                 <th
                                     scope="col"
-                                    className="px-6 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20 "
+                                    className="px-6 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20"
+                                 
                                 >
-                                    {" "}
-                                    Pago ({months[selectedMonthIndex]}){" "}
+                                    Pago ({months[selectedMonthIndex]})
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-zinc-400">
-                            {/* Mapea los jugadores para las filas */}
                             {players.map((player) => (
                                 <tr
                                     key={player.id}
                                     className="hover:bg-gray-50"
                                 >
+                                    {/* Celda Acciones (SOLO SI ES EDITOR) */}
                                     {isEditor && (
                                         <td className="px-2 py-4 whitespace-nowrap text-sm font-medium sticky left-0 bg-white hover:bg-gray-50 z-10">
+                                            {/* ... botones editar/eliminar ... */}
                                             <div className="flex justify-center items-center space-x-1">
-                                                {/* Botón Editar */}
                                                 <button
                                                     onClick={() =>
                                                         handleUpdatePlayerName(
@@ -159,7 +161,6 @@ function MonthlyAttendanceTable({
                                                         />{" "}
                                                     </svg>
                                                 </button>
-                                                {/* Botón Eliminar: Llama al handler pasado por props */}
                                                 <button
                                                     onClick={() =>
                                                         handleDeletePlayer(
@@ -167,7 +168,7 @@ function MonthlyAttendanceTable({
                                                             player.name
                                                         )
                                                     }
-                                                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100" // Añadido padding/hover bg
+                                                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100"
                                                     title="Eliminar jugador"
                                                 >
                                                     <svg
@@ -189,42 +190,36 @@ function MonthlyAttendanceTable({
                                             </div>
                                         </td>
                                     )}
-
                                     {/* Celda Nombre */}
-                                    <td className={`px-6 py-4 whitespace-nowrap  text-sm font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-10 ${isEditor ? 'left-[calc(3rem+1px)]' : 'left-0'}`}>
-                                        {" "}
-                                        {player.name}{" "}
-                                    </td>
+                                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky bg-white hover:bg-gray-50 z-10 left-0`}>
+                                    {player.name}
+                                </td>
                                     {/* Celdas Asistencia */}
                                     {trainingDates.map((_, dateIndex) => {
                                         const isSuspended =
                                             suspendedDates[dateIndex];
                                         const attendanceValue =
-                                            player.attendance[dateIndex]; // Puede ser true, false, o 'suspended'
-
+                                            player.attendance[dateIndex];
                                         return (
                                             <td
                                                 key={dateIndex}
                                                 className={`px-6 py-4 whitespace-nowrap text-sm text-center ${
                                                     isSuspended
                                                         ? "bg-gray-200"
-                                                        : "" // Fondo gris si está suspendido
+                                                        : ""
                                                 }`}
                                             >
                                                 {isSuspended ? (
-                                                    // Muestra 'S' o un icono si está suspendido
                                                     <span
                                                         className="text-gray-500 font-bold"
                                                         title="Entrenamiento suspendido"
                                                     >
-                                                        S
+                                                        {" "}
+                                                        S{" "}
                                                     </span>
                                                 ) : (
-                                                    // O un icono: <FaPause className="text-gray-400 mx-auto" />
-                                                    // Muestra el checkbox normal si no está suspendido
                                                     <input
                                                         type="checkbox"
-                                                        // Usa el valor booleano (true/false), ignora 'suspended' aquí
                                                         checked={
                                                             typeof attendanceValue ===
                                                             "boolean"
@@ -237,47 +232,56 @@ function MonthlyAttendanceTable({
                                                                 dateIndex
                                                             )
                                                         }
-                                                        disabled={!isEditor} // Deshabilitado si no es editor
+                                                        disabled={!isEditor} // <- La clave está aquí
                                                         className={`form-checkbox h-5 w-5 text-blue-600 rounded cursor-pointer focus:ring-blue-500 ${!isEditor ? 'opacity-50 cursor-not-allowed' : ''}`}
-
                                                         aria-label={`Asistencia de ${player.name} para ${trainingDates[dateIndex]}`}
-                                                        
                                                     />
                                                 )}
                                             </td>
                                         );
                                     })}
                                     {/* Celda Pago */}
-                                    <td className="flex items-center justify-center px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={player.paid}
-                                            // Llama a la función pasada por props
-                                            onChange={() =>
-                                                handlePaymentChange(player.id)
-                                            }
-                                            disabled={!isEditor} // Deshabilitado si no es editor
-                                            className={`form-checkbox h-5 w-5 text-green-600 rounded cursor-pointer focus:ring-green-500 ${!isEditor ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            
-                                            aria-label={`Pago de ${player.name} para ${months[selectedMonthIndex]}`}
-                                        />
-                                        <span
-                                            className={`ml-2 text-xs font-semibold ${
-                                                player.paid
-                                                    ? "text-green-700"
-                                                    : "text-red-700"
-                                            }`}
-                                        >
-                                            {" "}
-                                            {player.paid
-                                                ? "Pagado"
-                                                : "No Pago"}{" "}
-                                        </span>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                        <div className="flex items-center justify-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={player.paid}
+                                                onChange={() =>
+                                                    handlePaymentChange(
+                                                        player.id
+                                                    )
+                                                }
+                                                disabled={!isEditor} // <- Y aquí
+                                                className={`form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500 ${
+                                                    !isEditor
+                                                        ? "opacity-50 cursor-not-allowed"
+                                                        : "cursor-pointer"
+                                                }`}
+                                                aria-label={`Pago de ${player.name} para ${months[selectedMonthIndex]}`}
+                                            />
+                                            <span
+                                                className={`ml-2 text-xs font-semibold ${
+                                                    player.paid
+                                                        ? "text-green-700"
+                                                        : "text-red-700"
+                                                }`}
+                                            >
+                                                {player.paid
+                                                    ? "Pagado"
+                                                    : "No Pago"}
+                                            </span>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                ) : (
+                    <div className="px-6 py-4 text-center font-medium text-lg text-stone-900">
+                        {trainingDates && trainingDates.length > 0
+                            ? `No hay jugadores registrados para ${months[selectedMonthIndex]}. Agrega jugadores desde Opciones.`
+                            : `En ${months[selectedMonthIndex]} no hubo entrenamientos registrados.`}
+                    </div>
                 )}
             </div>
         </>
