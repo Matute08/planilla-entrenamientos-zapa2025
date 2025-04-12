@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom"; // Importa el hook useNavigate para redirección
 import Navbar from "./navbar"; // Importa el componente de navegación
 import Swal from "sweetalert2"; // Importa SweetAlert2 para mostrar alertas
 import Controls from "./controls";
@@ -9,12 +10,14 @@ import PaymentStatusSection from "./paymentStatusSection";
 import MonthlyAttendanceTable from "./monthlyAttendanceTable";
 import Footer from "./footer";
 import SpinnerIcon from "./spinnerIcon";
+import { useAuth } from "./authContext";
+import UserDisplay from "./userDisplay";
 
 // --- Constantes ---
 // URL de tu Google Apps Script
 const SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbygckn2NLCu0z7XvSbi1HtqOWdfdxX7QzhkwypKc20FEP4rr4Tcj9rvugrZHQTBpfQ2/exec";
-// Meses (puedes mover esto a un archivo de constantes si prefieres)
+
 const ALL_MONTH_NAMES = [
     "Enero",
     "Febrero",
@@ -26,11 +29,30 @@ const ALL_MONTH_NAMES = [
     "Agosto",
     "Septiembre",
     "Octubre",
-    "Noviembre"  /* ...otros meses */,
+    "Noviembre" /* ...otros meses */,
 ];
 
 // --- Componente Principal ---
 function PlanillaMasculino() {
+    const navigate = useNavigate(); // Hook para navegación
+    // ... (estados existentes: players, trainingDates, selectedMonthIndex, loading, etc.)
+    const {
+        isAuthenticated,
+        isAuthorized,
+        isGuest,
+        userProfile,
+        idToken,
+        handleLogout,
+        setShowLoginModal,
+    } = useAuth(); // Obtiene estado y token de AuthContext
+
+    // Determina si el usuario tiene permisos de edición REALES
+    const isEditor = isAuthenticated && isAuthorized && !isGuest;
+    const logoutAndRedirect = () => {
+        handleLogout(); // Llama a la función original del contexto
+        navigate("/"); // Redirige a la página principal
+    };
+
     const [players, setPlayers] = useState([]);
     const [trainingDates, setTrainingDates] = useState([]);
     const [selectedMonthIndex, setSelectedMonthIndex] = useState(
@@ -51,7 +73,10 @@ function PlanillaMasculino() {
     // Derivar los meses disponibles para el dropdown
     const currentActualMonthIndex = new Date().getMonth(); // 0-11
     // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
-    const availableMonths = ALL_MONTH_NAMES.slice(0, currentActualMonthIndex + 1);
+    const availableMonths = ALL_MONTH_NAMES.slice(
+        0,
+        currentActualMonthIndex + 1
+    );
 
     // --- Funciones de Fetch (GET) ---
     const fetchData = useCallback(
@@ -123,6 +148,29 @@ function PlanillaMasculino() {
     // --- Función Genérica para Acciones (POST) ---
     const performAction = useCallback(
         async (action, payload, showLoadingAlert = false) => {
+            // VERIFICA SI ES UNA ACCIÓN DE ESCRITURA Y SI EL USUARIO ES EDITOR AUTENTICADO
+            const writeActions = [
+                "attendance",
+                "payment",
+                "toggleSuspended",
+                "addPlayer",
+                "deletePlayer",
+                "updatePlayerName",
+                "addTrainingDate",
+                "deleteTrainingDate",
+            ];
+            if (writeActions.includes(action) && !isEditor) {
+                console.warn(
+                    "Intento de acción de escritura denegado para usuario no autorizado."
+                );
+                Swal.fire(
+                    "Acción no permitida",
+                    "Necesitas iniciar sesión como profesor autorizado para realizar cambios.",
+                    "warning"
+                );
+                return null; // No continuar si no es editor
+            }
+
             // Renombrado showOverlay a showLoadingAlert
             if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
                 Swal.fire("Error", "URL script no configurada", "error");
@@ -149,6 +197,9 @@ function PlanillaMasculino() {
                 ...payload,
                 action,
                 monthIndex: selectedMonthIndex,
+                ...(writeActions.includes(action) && idToken
+                    ? { idToken }
+                    : {}),
             };
             let success = false; // Variable para saber si la acción tuvo éxito
             let resultData = null; // Para guardar los datos de respuesta
@@ -232,7 +283,7 @@ function PlanillaMasculino() {
                 return resultData; // Devuelve resultado en éxito
             }
         },
-        [selectedMonthIndex, fetchData]
+        [selectedMonthIndex, fetchData, isEditor, idToken]
     );
 
     const fetchRankingData = useCallback(async () => {
@@ -454,42 +505,56 @@ function PlanillaMasculino() {
 
     const handleDeleteTrainingDate = useCallback(async () => {
         if (!trainingDates || trainingDates.length === 0) {
-            Swal.fire('Info', 'No hay fechas de entrenamiento para eliminar en este mes.', 'info');
+            Swal.fire(
+                "Info",
+                "No hay fechas de entrenamiento para eliminar en este mes.",
+                "info"
+            );
             return;
         }
 
         // Crear opciones para el select de Swal
         const dateOptions = {};
-        trainingDates.forEach(dateYYYYMMDD => {
+        trainingDates.forEach((dateYYYYMMDD) => {
             try {
                 // Muestra DD/MM al usuario, pero el valor interno es YYYY-MM-DD
-                const displayDate = new Date(dateYYYYMMDD + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                const displayDate = new Date(
+                    dateYYYYMMDD + "T00:00:00"
+                ).toLocaleDateString("es-AR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                });
                 dateOptions[dateYYYYMMDD] = displayDate; // key: YYYY-MM-DD, value: DD/MM
             } catch {
-                 dateOptions[dateYYYYMMDD] = dateYYYYMMDD; // Fallback si falla el formato
+                dateOptions[dateYYYYMMDD] = dateYYYYMMDD; // Fallback si falla el formato
             }
         });
 
         const { value: dateToDelete } = await Swal.fire({
             title: `Eliminar Entrenamiento (${ALL_MONTH_NAMES[selectedMonthIndex]})`,
-            input: 'select',
+            input: "select",
             inputOptions: dateOptions,
-            inputPlaceholder: 'Seleccione una fecha',
+            inputPlaceholder: "Seleccione una fecha",
             showCancelButton: true,
-            confirmButtonText: 'Eliminar Fecha',
-            confirmButtonColor: '#d33',
-            cancelButtonText: 'Cancelar',
+            confirmButtonText: "Eliminar Fecha",
+            confirmButtonColor: "#d33",
+            cancelButtonText: "Cancelar",
             inputValidator: (value) => {
                 if (!value) {
-                    return '¡Necesita seleccionar una fecha para eliminar!'
+                    return "¡Necesita seleccionar una fecha para eliminar!";
                 }
-            }
+            },
         });
 
-        if (dateToDelete) { // dateToDelete será el valor YYYY-MM-DD seleccionado
-            await performAction('deleteTrainingDate', { dateToDeleteString: dateToDelete }, true); // true para alerta de carga
+        if (dateToDelete) {
+            // dateToDelete será el valor YYYY-MM-DD seleccionado
+            await performAction(
+                "deleteTrainingDate",
+                { dateToDeleteString: dateToDelete },
+                true
+            ); // true para alerta de carga
         }
-    }, [performAction, selectedMonthIndex, trainingDates]); 
+    }, [performAction, selectedMonthIndex, trainingDates]);
 
     const handleToggleSuspended = useCallback(
         async (dateIndex) => {
@@ -638,8 +703,6 @@ function PlanillaMasculino() {
         [performAction]
     );
 
-    // Removed unused showMessage function
-
     const closeSpecialSections = () => {
         setShowRanking(false);
         setShowPaymentStatus(false);
@@ -653,12 +716,35 @@ function PlanillaMasculino() {
         <div className="flex flex-col h-screen fondo font-sans ">
             {/* Header con Navbar y Título */}
             <header className="text-white py-3 flex flex-col items-center px-4">
-                <div className="bg-black text-white text-start py-2 w-full">
+                {isAuthenticated && userProfile && (
+                    <div className="absolute top-4 right-4 z-50 py-2">
+                        <UserDisplay
+                            userProfile={userProfile}
+                            onLogout={logoutAndRedirect}
+                        />
+                    </div>
+                )}
+                {isGuest && (
+                    <div className="absolute top-4 right-4 z-50">
+                        <button
+                            onClick={() => setShowLoginModal(true)} // Abre el modal global
+                            className="text-lg bg-primary border-black  border rounded-full inline-flex items-center justify-left py-3 px-2 text-center mt-1 transition duration-150 ease-in-out shadow bg-blue-600 hover:bg-blue-700"
+                        >
+                            Iniciar Sesión
+                        </button>
+                    </div>
+                )}
+                {/* Navbar ahora recibe isEditor */}
+                <div className="bg-black text-white text-start py-2 w-full ">
                     {" "}
                     <Navbar
                         onAddPlayer={handleAddPlayer}
                         onAddTrainingDate={handleAddTrainingDate}
                         onDeleteTrainingDate={handleDeleteTrainingDate}
+                        isEditor={isEditor} // Pasa el estado de editor
+                        loading={loading}
+                        loadingRanking={loadingRanking}
+                        loadingPaymentStatus={loadingPaymentStatus}
                     />{" "}
                 </div>
                 <h1 className="text-3xl font-bold text-center mt-4 ">
@@ -679,8 +765,6 @@ function PlanillaMasculino() {
                     loadingRanking={loadingRanking}
                     loadingPaymentStatus={loadingPaymentStatus}
                     months={availableMonths}
-
-                    //onAddPlayer={handleAddPlayer} // Pasa la función si el botón está en Controls
                 />
 
                 {/* Componente de Mensajes de Feedback */}
@@ -736,6 +820,7 @@ function PlanillaMasculino() {
                             handleToggleSuspended={handleToggleSuspended}
                             handleDeletePlayer={handleDeletePlayer}
                             handleUpdatePlayerName={handleUpdatePlayerName}
+                            isEditor={isEditor} // Pasa el estado de editor
                         />
                     )}
             </main>

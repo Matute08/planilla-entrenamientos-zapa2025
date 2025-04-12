@@ -8,12 +8,14 @@ function Navbar({
     loadingPaymentStatus,
     onAddTrainingDate,
     onDeleteTrainingDate,
+    isEditor,
 }) {
     const isLoadingAnything = loading || loadingRanking || loadingPaymentStatus;
     const [dropdownOpen, setDropdownOpen] = React.useState(false);
     const [trainingDropdownOpen, setTrainingDropdownOpen] =
         React.useState(false);
     const navigate = useNavigate();
+    const actionButtonsDisabled = !isEditor || isLoadingAnything;
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -29,7 +31,7 @@ function Navbar({
     }, []);
 
     return (
-        <div className="flex justify-between items-center p-4 rounded-lg shadow-lg">
+        <div className="flex items-center  rounded-lg shadow-lg gap-2">
             <div>
                 <button
                     className="text-lg bg-primary border-primary border rounded-full inline-flex items-center justify-left py-3 px-7 text-center text-white hover:bg-[#464749] hover:border-[#464749] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#464749] active:border-[#464749]"
@@ -38,10 +40,22 @@ function Navbar({
                     Inicio
                 </button>
             </div>
+            {/* Botón Opciones (deshabilitado si no es editor) */}
             <div className="relative inline-block text-left">
                 <button
-                    className="text-lg bg-primary border-primary border rounded-full inline-flex items-center justify-center py-3 px-7 text-center text-white hover:bg-[#464749] hover:border-[#464749] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5 active:bg-[#464749] active:border-[#464749]"
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    
+                    className={`text-lg bg-primary borderprimary border rounded-full inline-flex items-center justify-center py-3 px-7 text-center text-white hover:bg-[#464749] hover:border[#464749] active:bg-[#464749] active:border-[#464749] transition duration-150 ease-in-out ${
+                        actionButtonsDisabled
+                            ? "opacity-50 cursor-not-allowed bg-gray-500 border-gray-500 hover:bg-gray-500"
+                            : ""
+                    }`}
+                    onClick={() =>
+                        actionButtonsDisabled
+                            ? null
+                            : setDropdownOpen(!dropdownOpen)
+                    } // No abrir si está deshabilitado
+                    disabled={actionButtonsDisabled} // Deshabilitar botón
+                    aria-disabled={actionButtonsDisabled}
                 >
                     Opciones
                     <svg
@@ -60,7 +74,7 @@ function Navbar({
                     </svg>
                 </button>
 
-                {dropdownOpen && (
+                {dropdownOpen && isEditor && (
                     <div className="absolute right-0 mt-2 w-48 bg-white border font-bold border-gray-200 rounded-xl shadow-lg z-1000">
                         <button
                             className="block w-full px-4 py-2 text-left text-black text-m hover:bg-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2"
@@ -82,6 +96,7 @@ function Navbar({
                                         !trainingDropdownOpen
                                     )
                                 }
+                                disabled={isLoadingAnything}
                             >
                                 Entrenamientos
                                 <svg
@@ -111,7 +126,7 @@ function Navbar({
                                         }}
                                         disabled={isLoadingAnything}
                                     >
-                                        Nuevo 
+                                        Nuevo
                                     </button>
                                     <hr className="border-gray-600" />
                                     <button
@@ -123,7 +138,7 @@ function Navbar({
                                         }}
                                         disabled={isLoadingAnything}
                                     >
-                                        Eliminar 
+                                        Eliminar
                                     </button>
                                 </div>
                             )}
