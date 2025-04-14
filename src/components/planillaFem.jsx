@@ -35,13 +35,12 @@ const ALL_MONTH_NAMES = [
 // --- Componente Principal ---
 function PlanillaFemenino() {
     const navigate = useNavigate(); // Hook para navegación
-    // ... (estados existentes: players, trainingDates, selectedMonthIndex, loading, etc.)
+
     const {
         isAuthenticated,
         isAuthorized,
         isGuest,
         userProfile,
-        idToken,
         handleLogout,
         setShowLoginModal,
         isLoadingAuth,
@@ -70,7 +69,7 @@ function PlanillaFemenino() {
     const [paymentStatusError, setPaymentStatusError] = useState(null);
     const [suspendedDates, setSuspendedDates] = useState([]);
     // Derivar los meses disponibles para el dropdown
-    const currentActualMonthIndex = new Date().getMonth(); // 0-11
+    const currentActualMonthIndex = new Date().getMonth();
 
     // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
     const availableMonths = ALL_MONTH_NAMES.slice(
@@ -149,6 +148,7 @@ function PlanillaFemenino() {
     const performAction = useCallback(
         async (action, payload, showLoadingAlert = false) => {
             const currentIsEditor = isAuthenticated && isAuthorized && !isGuest;
+            const userEmail = userProfile?.email; // Obtiene el email del perfil restaurado/actual
             const writeActions = [
                 "attendance",
                 "payment",
@@ -159,18 +159,32 @@ function PlanillaFemenino() {
                 "addTrainingDate",
                 "deleteTrainingDate",
             ];
-            if (writeActions.includes(action) && !currentIsEditor) {
+            const requiresAuthCheck = writeActions.includes(action);
+
+            if (requiresAuthCheck && !currentIsEditor) {
                 console.warn(
-                    `>>> performAction: Write action '${action}' denied based on RECALCULATED editor status=false.`
+                    ">>> performAction: Write action denied based on FRONTEND editor status=false."
                 );
                 Swal.fire(
                     "Acción no permitida",
-                    "Necesitas iniciar sesión como profesor autorizado.",
+                    "Debes ser un profesor autorizado.",
                     "warning"
                 );
                 return null;
             }
-            const requiresToken = writeActions.includes(action);
+            // Chequeo si tenemos email para enviar al backend
+            if (requiresAuthCheck && !userEmail) {
+                console.error(
+                    ">>> performAction: Error - Editor autorizado según UI pero falta email para enviar al backend."
+                );
+                Swal.fire(
+                    "Error de Sesión",
+                    "No se pudo obtener tu email para verificar. Por favor, inicia sesión de nuevo.",
+                    "error"
+                );
+                return null;
+            }
+
             // Renombrado showOverlay a showLoadingAlert
             if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
                 Swal.fire("Error", "URL script no configurada", "error");
@@ -189,7 +203,6 @@ function PlanillaFemenino() {
                 });
             }
             // Limpia errores específicos
-            // setMessage(''); // No limpiar mensaje aquí para permitir "Guardando..." previo para acciones menores
             setRankingError(null);
             setPaymentStatusError(null);
 
@@ -197,9 +210,8 @@ function PlanillaFemenino() {
                 ...payload,
                 action,
                 monthIndex: selectedMonthIndex,
-                ...(requiresToken && idToken ? { idToken } : {}),
+                ...(requiresAuthCheck ? { userEmail: userEmail } : {}),
             };
-           
 
             let success = false; // Variable para saber si la acción tuvo éxito
             let resultData = null; // Para guardar los datos de respuesta
@@ -221,11 +233,13 @@ function PlanillaFemenino() {
                     }
                     throw new Error(errorMsg);
                 }
-                const result = await response.json();
-                if (result.error) {
-                    throw new Error(result.message || `Error: ${action}`);
-                }
 
+                const result = await response.json();
+                if (!response.ok || result.error) {
+                    throw new Error(
+                        result.message || `Error ${response.status}`
+                    );
+                }
                 // Guarda el resultado y marca éxito
                 resultData = result;
                 success = true;
@@ -286,7 +300,7 @@ function PlanillaFemenino() {
         [
             selectedMonthIndex,
             fetchData,
-            idToken,
+            userProfile,
             isAuthenticated,
             isAuthorized,
             isGuest,
@@ -456,7 +470,6 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-               
                 setMessage("");
                 setPlayers(originalPlayers);
             }
@@ -596,7 +609,6 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-                
                 setMessage("");
                 setSuspendedDates(originalSuspendedDates);
                 setPlayers(originalPlayers);
@@ -625,7 +637,6 @@ function PlanillaFemenino() {
                 false
             ); // false = no alert de carga
             if (successResult === null) {
-                
                 setMessage("");
                 setPlayers(originalPlayers);
             }

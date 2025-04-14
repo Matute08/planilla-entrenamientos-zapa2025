@@ -160,7 +160,7 @@ function PlanillaMasculino() {
                 "deleteTrainingDate",
             ];
             const requiresAuthCheck = writeActions.includes(action);
-            
+
             if (requiresAuthCheck && !currentIsEditor) {
                 console.warn(
                     ">>> performAction: Write action denied based on FRONTEND editor status=false."
@@ -185,7 +185,6 @@ function PlanillaMasculino() {
                 return null;
             }
 
-            
             // Renombrado showOverlay a showLoadingAlert
             if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
                 Swal.fire("Error", "URL script no configurada", "error");
@@ -214,10 +213,6 @@ function PlanillaMasculino() {
                 ...(requiresAuthCheck ? { userEmail: userEmail } : {}),
             };
 
-            console.log(`>>> performAction: START '${action}'. Frontend thinks isEditor=${currentIsEditor}. Sending email: ${userEmail || 'N/A'}`);
-            console.log(">>> performAction: Payload:", JSON.stringify(fullPayload));
-    
-
             let success = false; // Variable para saber si la acción tuvo éxito
             let resultData = null; // Para guardar los datos de respuesta
 
@@ -238,10 +233,12 @@ function PlanillaMasculino() {
                     }
                     throw new Error(errorMsg);
                 }
-               
-                const result = await response.json(); 
+
+                const result = await response.json();
                 if (!response.ok || result.error) {
-                    throw new Error(result.message || `Error ${response.status}`);
+                    throw new Error(
+                        result.message || `Error ${response.status}`
+                    );
                 }
                 // Guarda el resultado y marca éxito
                 resultData = result;
