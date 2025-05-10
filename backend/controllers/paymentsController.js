@@ -35,11 +35,7 @@ export const upsertPayment = async (req, res) => {
 
 // GET /api/payments/pendings
 export const getPendingPayments = async (req, res) => {
-  const { month, year } = req.query;
-
-  if (month === undefined || year === undefined) {
-    return res.status(400).json({ error: 'Faltan parámetros month y year' });
-  }
+  const year = new Date().getFullYear();
 
   try {
     // 1. Traer todos los jugadores
@@ -48,23 +44,36 @@ export const getPendingPayments = async (req, res) => {
       .select('id, name');
     if (errorPlayers) throw errorPlayers;
 
-    // 2. Traer todos los pagos de ese mes y año
+    // 2. Traer todos los pagos del año actual
     const { data: payments, error: errorPayments } = await supabase
       .from('payments')
-      .select('player_id, paid')
-      .eq('month', parseInt(month))
-      .eq('year', parseInt(year));
+      .select('player_id, month, paid')
+      .eq('year', year);
     if (errorPayments) throw errorPayments;
 
-    // 3. Filtrar jugadores sin pago o pago = false
-    const pendientes = players.filter((player) => {
-      const pago = payments.find((p) => p.player_id === player.id);
-      return !pago || !pago.paid;
+    // 3. Generar lista de meses 0 a actual (no incluir futuros)
+    const currentMonth = new Date().getMonth();
+    const monthsToCheck = Array.from({ length: currentMonth + 1 }, (_, i) => i);
+
+    // 4. Calcular deudas por jugador
+    const resultados = players.map(player => {
+      const pagosJugador = payments.filter(p => p.player_id === player.id);
+      const owedMonths = monthsToCheck.filter(m => {
+        const pago = pagosJugador.find(p => p.month === m);
+        return !pago || !pago.paid;
+      });
+
+      return {
+        name: player.name,
+        owedCount: owedMonths.length,
+        owedMonths: owedMonths.map(i => ALL_MONTH_NAMES[i])
+      };
     });
 
-    res.json(pendientes); // [{ id, name }, ...]
+    res.json(resultados.filter(r => r.owedCount > 0));
   } catch (err) {
-    console.error('Error en pagos pendientes:', err.message);
+    console.error("Error en pagos pendientes:", err.message);
     res.status(500).json({ error: err.message });
   }
 };
+
