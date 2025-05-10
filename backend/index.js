@@ -7,6 +7,8 @@ import playersRoutes from './routes/players.js'
 import attendanceRoutes from './routes/attendance.js'
 import trainingsRoutes from './routes/trainings.js'
 import paymentsRoutes from './routes/payments.js'
+import rankingRoutes from './routes/ranking.js';
+
 
 
 
@@ -18,6 +20,7 @@ app.use('/api/players', playersRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/trainings', trainingsRoutes)
 app.use('/api/payments', paymentsRoutes)
+app.use('/api/ranking', rankingRoutes);
 
 
 const PORT = process.env.PORT || 3001
