@@ -1,5 +1,11 @@
 import { supabase } from '../services/supabaseClient.js'
 
+const ALL_MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+
 // GET /api/payments?player_id=...&month=...&year=...
 export const getPayments = async (req, res) => {
   const { player_id, month, year } = req.query
