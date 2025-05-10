@@ -1,5 +1,5 @@
 import express from 'express'
-import { getPayments, upsertPayment } from '../controllers/paymentsController.js'
+import { getPayments, upsertPayment, getPendingPayments } from '../controllers/paymentsController.js'
 
 const router = express.Router()
 
