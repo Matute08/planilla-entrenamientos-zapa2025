@@ -285,57 +285,35 @@ const fetchRankingData = useCallback(async () => {
 }, []);
 
 
-  const fetchPaymentStatusData = useCallback(async () => {
-    // Limpia errores específicos
-    setError(null);
-    setRankingError(null);
-    if (!SCRIPT_URL || SCRIPT_URL === "URL_DE_TU_APPS_SCRIPT_AQUI") {
-      Swal.fire("Error", "URL del script no configurada", "error");
-      return;
+const fetchPaymentStatusData = useCallback(async () => {
+  setError(null);
+  setRankingError(null);
+  setLoadingPaymentStatus(true);
+  setPaymentStatusError(null);
+  setPaymentStatusData(null);
+  setMessage("");
+  setShowRanking(false);
+  setRankingData(null);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/payments/pendings?month=${selectedMonthIndex}&year=${new Date().getFullYear()}`);
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
-    setLoadingPaymentStatus(true);
-    setPaymentStatusError(null);
-    setPaymentStatusData(null);
-    setMessage("");
-    setShowRanking(false);
-    setRankingData(null);
-    try {
-      const url = `${SCRIPT_URL}?action=getPaymentStatus`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        let errorMsg = `Error ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch {
-          // Intentionally left empty
-        }
-        throw new Error(errorMsg);
-      }
-      const data = await response.json();
-      if (data.error) {
-        throw new Error("Error al obtener pagos.");
-      }
-      if (data && Array.isArray(data.paymentStatus)) {
-        setPaymentStatusData(data.paymentStatus);
-        setShowPaymentStatus(true);
-      } else {
-        console.error("Respuesta inesperada (pagos):", data);
-        throw new Error("Formato datos pagos inesperado.");
-      }
-    } catch (err) {
-      console.error("Error fetching payment status data:", err);
-      setPaymentStatusError(`Error al cargar pagos: ${err.message}`); // Guarda error específico
-      Swal.fire(
-        "Error",
-        `No se pudo cargar el estado de pagos: ${err.message}`,
-        "error"
-      ); // Muestra alerta
-      setShowPaymentStatus(false);
-    } finally {
-      setLoadingPaymentStatus(false);
-    }
-  }, []);
+
+    const data = await response.json();
+    setPaymentStatusData(data);
+    setShowPaymentStatus(true);
+  } catch (err) {
+    console.error("Error fetching payment status data:", err);
+    setPaymentStatusError(`Error al cargar pagos: ${err.message}`);
+    Swal.fire("Error", `No se pudo cargar el estado de pagos: ${err.message}`, "error");
+    setShowPaymentStatus(false);
+  } finally {
+    setLoadingPaymentStatus(false);
+  }
+}, [selectedMonthIndex]);
+
 
   // --- Efecto para cargar datos mensuales iniciales ---
   useEffect(() => {
@@ -580,66 +558,107 @@ const handlePaymentChange = useCallback(
     setPaymentStatusData(null);
   };
   // --- Manejadores para Acciones de Jugador (Usan SweetAlert) ---
-  const handleAddPlayer = useCallback(async () => {
-    const { value: playerName } = await Swal.fire({
-      title: "Agregar Jugador",
-      input: "text",
-      inputLabel: "Nombre",
-      showCancelButton: true,
-      confirmButtonText: "Agregar",
-      cancelButtonText: "Cancelar",
-      inputValidator: (v) => (!v || !v.trim() ? "Escriba un nombre" : null),
-    });
-    if (playerName) {
-      await performAction("addPlayer", { playerName: playerName.trim() }, true); // true = SÍ alert de carga
+const handleAddPlayer = useCallback(async () => {
+  const { value: playerName } = await Swal.fire({
+    title: "Agregar Jugador",
+    input: "text",
+    inputLabel: "Nombre",
+    showCancelButton: true,
+    confirmButtonText: "Agregar",
+    cancelButtonText: "Cancelar",
+    inputValidator: (v) => (!v || !v.trim() ? "Escriba un nombre" : null),
+  });
+
+  if (playerName) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/players`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: playerName.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al agregar jugador");
+      }
+
+      await fetchData(selectedMonthIndex); // recargar
+      Swal.fire("Éxito", "Jugador agregado", "success");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
     }
-  }, [performAction]);
+  }
+}, [selectedMonthIndex, fetchData]);
 
-  const handleDeletePlayer = useCallback(
-    async (playerId, playerName) => {
-      const result = await Swal.fire({
-        title: "¿Seguro desea eliminar?",
-        html: `¿Eliminar a <u><strong>${playerName}</strong></u>?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar",
-      });
-      if (result.isConfirmed) {
-        await performAction("deletePlayer", { playerId }, true); // true = SÍ alert de carga
-      }
-    },
-    [performAction]
-  );
 
-  const handleUpdatePlayerName = useCallback(
-    async (playerId, currentName) => {
-      const { value: newName } = await Swal.fire({
-        title: "Editar Nombre",
-        input: "text",
-        inputLabel: `Nuevo nombre para ${currentName}`,
-        inputValue: currentName,
-        showCancelButton: true,
-        confirmButtonText: "Guardar",
-        cancelButtonText: "Cancelar",
-        inputValidator: (v) =>
-          !v || !v.trim()
-            ? "Nombre vacío"
-            : v.trim() === currentName
-            ? "Nombre igual al actual"
-            : null,
+const handleDeletePlayer = useCallback(async (playerId, playerName) => {
+  const result = await Swal.fire({
+    title: "¿Seguro desea eliminar?",
+    html: `¿Eliminar a <u><strong>${playerName}</strong></u>?`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/players/${playerId}`, {
+        method: "DELETE",
       });
-      if (newName && newName.trim() !== currentName) {
-        await performAction(
-          "updatePlayerName",
-          { playerId, newName: newName.trim() },
-          true
-        ); // true = SÍ alert de carga
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al eliminar jugador");
       }
-    },
-    [performAction]
-  );
+
+      await fetchData(selectedMonthIndex);
+      Swal.fire("Eliminado", "Jugador eliminado", "success");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
+  }
+}, [selectedMonthIndex, fetchData]);
+
+const handleUpdatePlayerName = useCallback(async (playerId, currentName) => {
+  const { value: newName } = await Swal.fire({
+    title: "Editar Nombre",
+    input: "text",
+    inputLabel: `Nuevo nombre para ${currentName}`,
+    inputValue: currentName,
+    showCancelButton: true,
+    confirmButtonText: "Guardar",
+    cancelButtonText: "Cancelar",
+    inputValidator: (v) =>
+      !v || !v.trim()
+        ? "Nombre vacío"
+        : v.trim() === currentName
+        ? "Nombre igual al actual"
+        : null,
+  });
+
+  if (newName && newName.trim() !== currentName) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/players/${playerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al modificar jugador");
+      }
+
+      await fetchData(selectedMonthIndex);
+      Swal.fire("Actualizado", "Nombre actualizado", "success");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
+  }
+}, [selectedMonthIndex, fetchData]);
+
 
   const closeSpecialSections = () => {
     setShowRanking(false);

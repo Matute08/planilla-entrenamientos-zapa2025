@@ -32,3 +32,39 @@ export const upsertPayment = async (req, res) => {
   if (error) return res.status(500).json({ error: error.message })
   res.json({ message: 'Pago registrado/actualizado', data })
 }
+
+// GET /api/payments/pendings
+export const getPendingPayments = async (req, res) => {
+  const { month, year } = req.query;
+
+  if (month === undefined || year === undefined) {
+    return res.status(400).json({ error: 'Faltan parámetros month y year' });
+  }
+
+  try {
+    // 1. Traer todos los jugadores
+    const { data: players, error: errorPlayers } = await supabase
+      .from('players')
+      .select('id, name');
+    if (errorPlayers) throw errorPlayers;
+
+    // 2. Traer todos los pagos de ese mes y año
+    const { data: payments, error: errorPayments } = await supabase
+      .from('payments')
+      .select('player_id, paid')
+      .eq('month', parseInt(month))
+      .eq('year', parseInt(year));
+    if (errorPayments) throw errorPayments;
+
+    // 3. Filtrar jugadores sin pago o pago = false
+    const pendientes = players.filter((player) => {
+      const pago = payments.find((p) => p.player_id === player.id);
+      return !pago || !pago.paid;
+    });
+
+    res.json(pendientes); // [{ id, name }, ...]
+  } catch (err) {
+    console.error('Error en pagos pendientes:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
