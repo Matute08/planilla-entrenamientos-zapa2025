@@ -8,8 +8,13 @@ export const getAllFixture = async (req, res) => {
 };
 
 export const createFixtureItem = async (req, res) => {
-  const { equipo, fecha, hora_inicio, cancha, rival, observaciones } = req.body;
-  const { data, error } = await supabase.from('fixture').insert([{ equipo, fecha, hora_inicio, cancha, rival, observaciones }]).select();
+  const { equipo, etapa, hora_inicio, cancha, rival, observaciones } = req.body;
+
+  const { data, error } = await supabase
+    .from('fixture')
+    .insert([{ equipo, etapa, hora_inicio, cancha, rival, observaciones }])
+    .select();
+
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data[0]);
 };
