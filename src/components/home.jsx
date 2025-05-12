@@ -61,6 +61,13 @@ function Home() {
                 >
                     Femenino
                 </button>
+
+                <button
+                    className="bg-pink-600 border-pink-600 border rounded-md inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-pink-700 hover:border-pink-700 disabled:bg-gray-400 disabled:border-gray-400 active:bg-pink-800 active:border-pink-800 transition duration-150 ease-in-out shadow-md"
+                    onClick={() => navigate("/fixture")}
+                >
+                    Fixture
+                </button>
             </div>
             {/* Mensaje de Bienvenida Condicional */}
             <div className="mt-6 text-gray-300">

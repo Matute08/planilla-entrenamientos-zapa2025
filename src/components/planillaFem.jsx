@@ -1,7 +1,7 @@
-// PlanillaFemenino.jsx — Componente completo funcional
-import React, { useCallback, useEffect, useState } from "react";
-import Swal from "sweetalert2";
-import Navbar from "./navbar";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom"; // Importa el hook useNavigate para redirección
+import Navbar from "./navbar"; // Importa el componente de navegación
+import Swal from "sweetalert2"; // Importa SweetAlert2 para mostrar alertas
 import Controls from "./controls";
 import FeedbackMessages from "./feedbackMessages";
 import LoadingIndicators from "./loadingIndicators";
@@ -9,44 +9,84 @@ import RankingSection from "./rankingSection";
 import PaymentStatusSection from "./paymentStatusSection";
 import MonthlyAttendanceTable from "./monthlyAttendanceTable";
 import Footer from "./footer";
-import API_BASE_URL from "../api";
+import SpinnerIcon from "./spinnerIcon";
 import { useAuth } from "./authContext";
+import UserDisplay from "./userDisplay";
+
+import API_BASE_URL from "../api";
+
+// --- Constantes ---
+// URL de tu Google Apps Script
+//const SCRIPT_URL =
+//    "https://script.google.com/macros/s/AKfycbygckn2NLCu0z7XvSbi1HtqOWdfdxX7QzhkwypKc20FEP4rr4Tcj9rvugrZHQTBpfQ2/exec";
+
+// URL de la API)
+const SCRIPT_URL = API_BASE_URL;
 
 const ALL_MONTH_NAMES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
+// --- Componente Principal ---
 function PlanillaFemenino() {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(currentMonth);
-  const [players, setPlayers] = useState([]);
-  const [trainingDates, setTrainingDates] = useState([]);
-  const [suspendedDates, setSuspendedDates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(null);
-  const [showRanking, setShowRanking] = useState(false);
-  const [rankingData, setRankingData] = useState(null);
-  const [showPaymentStatus, setShowPaymentStatus] = useState(false);
-  const [paymentStatusData, setPaymentStatusData] = useState(null);
-  const [rankingError, setRankingError] = useState(null);
-  const [paymentStatusError, setPaymentStatusError] = useState(null);
-  const [loadingRanking, setLoadingRanking] = useState(false);
-  const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
+  const navigate = useNavigate(); // Hook para navegación
 
   const {
     isAuthenticated,
     isAuthorized,
     isGuest,
     userProfile,
-  } = useAuth();
+    handleLogout,
+    setShowLoginModal,
+    isLoadingAuth,
+  } = useAuth(); // Obtiene estado y token de AuthContext
 
+  const logoutAndRedirect = () => {
+    handleLogout(); // Llama a la función original del contexto
+    navigate("/"); // Redirige a la página principal
+  };
+
+  const [players, setPlayers] = useState([]);
+  const [trainingDates, setTrainingDates] = useState([]);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(
+    new Date().getMonth()
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState("");
+  const [rankingData, setRankingData] = useState(null);
+  const [showRanking, setShowRanking] = useState(false);
+  const [loadingRanking, setLoadingRanking] = useState(false);
+  const [rankingError, setRankingError] = useState(null);
+  const [paymentStatusData, setPaymentStatusData] = useState(null);
+  const [showPaymentStatus, setShowPaymentStatus] = useState(false);
+  const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(false);
+  const [paymentStatusError, setPaymentStatusError] = useState(null);
+  const [suspendedDates, setSuspendedDates] = useState([]);
+  // Derivar los meses disponibles para el dropdown
+  const currentActualMonthIndex = new Date().getMonth();
+
+  // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
+  const availableMonths = ALL_MONTH_NAMES.slice(0, currentActualMonthIndex + 1);
+
+  
+
+  // --- Funciones de Fetch (GET) ---
   const fetchData = useCallback(async (monthIndex, suppressLoading = false) => {
     setRankingError(null);
     setPaymentStatusError(null);
+
     if (!suppressLoading) setLoading(true);
     setMessage("");
     setPlayers([]);
@@ -56,28 +96,52 @@ function PlanillaFemenino() {
     try {
       const year = new Date().getFullYear();
 
+      // 1. Traer jugadores
       const playersRes = await fetch(`${API_BASE_URL}/femenino/players`);
       const playersData = await playersRes.json();
 
-      const trainingsRes = await fetch(`${API_BASE_URL}/femenino/trainings?month=${monthIndex}`);
-      const trainingsData = await trainingsRes.json();
-      const trainingIdMap = trainingsData.map(t => ({ id: t.id, date: t.date, is_suspended: t.is_suspended }));
+      // 2. Traer entrenamientos del mes
+      const trainingsRes = await fetch(
+        `${API_BASE_URL}/femenino/trainings?month=${monthIndex}`
+      );
 
+      const trainingsData = await trainingsRes.json();
+
+      // Separar fechas y estados
+      const trainingIdMap = trainingsData.map((t) => ({
+        id: t.id,
+        date: t.date,
+        is_suspended: t.is_suspended,
+      }));
+
+      setTrainingDates(trainingIdMap); // Guardamos los objetos completos
+      setSuspendedDates(trainingIdMap.map((t) => t.is_suspended));
+
+      // 3. Traer asistencias
       const attendanceRes = await fetch(`${API_BASE_URL}/femenino/attendance`);
       const attendanceData = await attendanceRes.json();
 
-      const paymentsRes = await fetch(`${API_BASE_URL}/femenino/payments?year=${year}&month=${monthIndex}`);
+      // 4. Traer pagos
+      const paymentsRes = await fetch(
+        `${API_BASE_URL}/femenino/payments?year=${year}&month=${monthIndex}`
+      );
       const paymentsData = await paymentsRes.json();
 
-      const jugadoresProcesados = playersData.map(player => {
-        const attendanceDelJugador = trainingIdMap.map(training => {
+      // 5. Unificar por jugador
+      const jugadoresProcesados = playersData.map((player) => {
+        const attendanceDelJugador = trainingIdMap.map((training) => {
           const record = attendanceData.find(
-            a => a.player_id === player.id && a.training_id === training.id
+            (a) => a.player_id === player.id && a.training_id === training.id
           );
           return record ? record.present : false;
         });
 
-        const pago = paymentsData.find(p => p.player_id === player.id && p.month === monthIndex && p.year === year);
+        const pago = paymentsData.find(
+          (p) =>
+            p.player_id === player.id &&
+            p.month === monthIndex &&
+            p.year === year
+        );
 
         return {
           ...player,
@@ -87,117 +151,250 @@ function PlanillaFemenino() {
       });
 
       setPlayers(jugadoresProcesados);
-      setTrainingDates(trainingIdMap);
-      setSuspendedDates(trainingIdMap.map(t => t.is_suspended));
-
+      setSuspendedDates(trainingIdMap.map((t) => t.is_suspended));
     } catch (err) {
-      console.error("Error al cargar datos:", err);
-      Swal.fire("Error", `No se pudieron cargar los datos: ${err.message}`, "error");
+      console.error("Error al cargar datos del mes:", err);
+      Swal.fire(
+        "Error",
+        `No se pudieron cargar los datos: ${err.message}`,
+        "error"
+      );
     } finally {
       if (!suppressLoading) setLoading(false);
     }
   }, []);
 
+   // --- Efecto para cargar datos mensuales iniciales ---
   useEffect(() => {
-    fetchData(selectedMonthIndex);
-  }, [selectedMonthIndex, fetchData]);
-
-  const performAction = useCallback(async (action, payload, showLoadingAlert = false) => {
-    const currentIsEditor = isAuthenticated && isAuthorized && !isGuest;
-
-    if (!currentIsEditor) {
-      Swal.fire("Acción no permitida", "Debes ser un profesor autorizado.", "warning");
-      return null;
+    // Carga inicial o al cambiar de mes si no hay secciones especiales activas/cargando
+    if (
+      !showRanking &&
+      !showPaymentStatus &&
+      !loadingRanking &&
+      !loadingPaymentStatus
+    ) {
+      fetchData(selectedMonthIndex);
     }
+  }, [
+    selectedMonthIndex,
+    fetchData,
+    showRanking,
+    showPaymentStatus,
+    loadingRanking,
+    loadingPaymentStatus,
+  ]);
+  // --- Función Genérica para Acciones (POST) ---
+  const performAction = useCallback(
+    async (action, payload, showLoadingAlert = false) => {
+      const currentIsEditor = isAuthenticated && isAuthorized && !isGuest;
+      const userEmail = userProfile?.email;
 
-    if (showLoadingAlert) {
-      Swal.fire({ title: "Procesando...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    }
-
-    try {
-      let response;
-
-      switch (action) {
-        case "attendance":
-          response = await fetch(`${API_BASE_URL}/femenino/attendance`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              player_id: payload.playerId,
-              training_id: payload.trainingId,
-              present: payload.value,
-            }),
-          });
-          break;
-
-        case "payment":
-          response = await fetch(`${API_BASE_URL}/femenino/payments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              player_id: payload.playerId,
-              month: selectedMonthIndex,
-              year: new Date().getFullYear(),
-              paid: payload.value,
-            }),
-          });
-          break;
-
-        case "toggleSuspended":
-          response = await fetch(`${API_BASE_URL}/femenino/trainings/${payload.trainingId}/suspend`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ is_suspended: payload.value }),
-          });
-          break;
-
-        default:
-          throw new Error(`Acción no soportada: ${action}`);
+      if (!currentIsEditor) {
+        Swal.fire(
+          "Acción no permitida",
+          "Debes ser un profesor autorizado.",
+          "warning"
+        );
+        return null;
       }
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Error inesperado");
 
       if (showLoadingAlert) {
-        Swal.fire({ icon: "success", title: "Acción realizada", timer: 1200, showConfirmButton: false });
-      } else {
-        setMessage("Acción guardada con éxito");
+        Swal.fire({
+          title: "Procesando...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
       }
 
-      return result;
+      try {
+        let response;
+
+        switch (action) {
+          case "attendance":
+            response = await fetch(`${API_BASE_URL}/femenino/attendance`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                player_id: payload.playerId,
+                training_id: payload.trainingId,
+                present: payload.value,
+              }),
+            });
+            break;
+
+          case "payment":
+            response = await fetch(`${API_BASE_URL}/femenino/payments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                player_id: payload.playerId,
+                month: selectedMonthIndex,
+                year: new Date().getFullYear(),
+                paid: payload.value,
+              }),
+            });
+            break;
+
+          case "toggleSuspended":
+            response = await fetch(
+              `${API_BASE_URL}/femenino/trainings/${payload.trainingId}/suspend`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  is_suspended: payload.value,
+                }),
+              }
+            );
+            break;
+
+          default:
+            throw new Error(`Acción no soportada: ${action}`);
+        }
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Error inesperado");
+
+        if (showLoadingAlert) {
+          Swal.fire({
+            icon: "success",
+            title: "Acción realizada",
+            timer: 1200,
+            showConfirmButton: false,
+          });
+        } else {
+          setMessage("Acción guardada con éxito");
+        }
+
+        return result;
+      } catch (err) {
+        console.error("performAction error:", err);
+        if (showLoadingAlert) Swal.close();
+        Swal.fire("Error", err.message, "error");
+        return null;
+      }
+    },
+    [selectedMonthIndex, isAuthenticated, isAuthorized, isGuest, userProfile]
+  );
+
+  const fetchRankingData = useCallback(async () => {
+    setError(null);
+    setPaymentStatusError(null);
+    setLoadingRanking(true);
+    setRankingError(null);
+    setRankingData(null);
+    setMessage("");
+    setShowPaymentStatus(false);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/femenino/ranking`);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setRankingData(data);
+      setShowRanking(true);
     } catch (err) {
-      console.error("performAction error:", err);
-      if (showLoadingAlert) Swal.close();
-      Swal.fire("Error", err.message, "error");
-      return null;
+      console.error("Error fetching ranking data:", err);
+      setRankingError(`Error al cargar ranking: ${err.message}`);
+      Swal.fire(
+        "Error",
+        `No se pudo cargar el ranking: ${err.message}`,
+        "error"
+      );
+      setShowRanking(false);
+    } finally {
+      setLoadingRanking(false);
     }
-  }, [selectedMonthIndex, isAuthenticated, isAuthorized, isGuest]);
+  }, []);
 
-  const handleAttendanceChange = useCallback((playerId, dateIndex) => {
-    if (suspendedDates[dateIndex]) {
-      setMessage("Día suspendido.");
-      return;
+  const fetchPaymentStatusData = useCallback(async () => {
+    setError(null);
+    setRankingError(null);
+    setLoadingPaymentStatus(true);
+    setPaymentStatusError(null);
+    setPaymentStatusData(null);
+    setMessage("");
+    setShowRanking(false);
+    setRankingData(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/femenino/payments/pendings?month=${selectedMonthIndex}&year=${new Date().getFullYear()}`
+      );
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setPaymentStatusData(data);
+      setShowPaymentStatus(true);
+    } catch (err) {
+      console.error("Error fetching payment status data:", err);
+      setPaymentStatusError(`Error al cargar pagos: ${err.message}`);
+      Swal.fire(
+        "Error",
+        `No se pudo cargar el estado de pagos: ${err.message}`,
+        "error"
+      );
+      setShowPaymentStatus(false);
+    } finally {
+      setLoadingPaymentStatus(false);
     }
+  }, [selectedMonthIndex]);
 
-    const originalPlayers = players.map((p) => ({ ...p, attendance: [...p.attendance] }));
-    const playerIndex = originalPlayers.findIndex((p) => p.id === playerId);
-    if (playerIndex === -1) return;
+  // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
 
-    const previousValue = originalPlayers[playerIndex].attendance[dateIndex];
-    const newValue = typeof previousValue === "boolean" ? !previousValue : true;
-    const trainingId = trainingDates[dateIndex]?.id;
+  const handleAttendanceChange = useCallback(
+    async (playerId, dateIndex) => {
+      if (suspendedDates[dateIndex]) {
+        setMessage("Día suspendido.");
+        return;
+      }
 
-    setPlayers((prev) => prev.map((p) =>
-      p.id === playerId ? {
+      const originalPlayers = players.map((p) => ({
         ...p,
-        attendance: p.attendance.map((att, idx) => idx === dateIndex ? newValue : att)
-      } : p
-    ));
+        attendance: [...p.attendance],
+      }));
 
-    performAction("attendance", { playerId, trainingId, value: newValue });
-  }, [players, trainingDates, suspendedDates, performAction]);
+      const playerIndex = originalPlayers.findIndex((p) => p.id === playerId);
+      if (playerIndex === -1) return;
 
-  //----------------------
+      const previousValue = originalPlayers[playerIndex].attendance[dateIndex];
+      const newValue =
+        typeof previousValue === "boolean" ? !previousValue : true;
+
+      const trainingId = trainingDates[dateIndex]?.id;
+      // Ahora cada fecha en `trainingDates` es un objeto con `id`
+
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((p) =>
+          p.id === playerId
+            ? {
+                ...p,
+                attendance: p.attendance.map((att, idx) =>
+                  idx === dateIndex ? newValue : att
+                ),
+              }
+            : p
+        )
+      );
+
+      setMessage("Guardando asistencia...");
+      const successResult = await performAction(
+        "attendance",
+        { playerId, trainingId, value: newValue },
+        false
+      );
+
+      if (successResult === null) {
+        setMessage("");
+        setPlayers(originalPlayers);
+      }
+    },
+    [players, performAction, suspendedDates, trainingDates]
+  );
   const handleDeleteTraining = useCallback(
     async (trainingId, trainingDate) => {
       const result = await Swal.fire({
@@ -590,3 +787,4 @@ const handleAddTraining = useCallback(async () => {
 
 // Exportación del componente principal
 export default PlanillaFemenino;
+// 
