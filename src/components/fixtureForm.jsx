@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import API_BASE_URL from '../api';
 import Swal from 'sweetalert2';
-
+import { useNavigate } from 'react-router-dom';
 function FixtureForm({ onAdd }) {
+    const navigate = useNavigate();
   const etapas = [
     'Fecha 1', 'Fecha 2', 'Fecha 3', 'Fecha 4', 'Fecha 5',
     'Fecha 6', 'Fecha 7', 'Fecha 8', 'Fecha 9', 'Fecha 10',
@@ -44,6 +45,7 @@ function FixtureForm({ onAdd }) {
   };
 
   return (
+    
     <form onSubmit={handleSubmit} className="p-4 bg-white rounded shadow-md space-y-3">
       <h3 className="text-lg font-bold">Agregar partido al fixture</h3>
 
@@ -87,6 +89,16 @@ function FixtureForm({ onAdd }) {
       <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
         Guardar partido
       </button>
+      <div className="max-w-3xl mx-auto p-6 bg-white rounded shadow space-y-4">
+      <button
+        onClick={() => navigate('/fixture')}
+        className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+      >
+        ← Volver al fixture
+      </button>
+
+      <FixtureForm onAdd={() => navigate('/fixture')} />
+    </div>
     </form>
   );
 }

@@ -8,11 +8,17 @@ function Fixture() {
   const [solapados, setSolapados] = useState([]);
   const navigate = useNavigate();
 
-  const fetchFixture = async () => {
-    const res = await fetch(`${API_BASE_URL}/fixture`);
-    const data = await res.json();
+const fetchFixture = async () => {
+  const res = await fetch(`${API_BASE_URL}/fixture`);
+  const data = await res.json();
+
+  if (Array.isArray(data)) {
     setFixture(data);
-  };
+  } else {
+    console.error("Error inesperado:", data);
+    setFixture([]); // Evita que se rompa
+  }
+};
 
   const fetchSolapados = async () => {
     const res = await fetch(`${API_BASE_URL}/fixture/solapados`);
