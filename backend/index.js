@@ -15,6 +15,7 @@ import trainingsFRoutes from './routes/femenino/trainingsF.js';
 import attendanceFRoutes from './routes/femenino/attendanceF.js';
 import paymentsFRoutes from './routes/femenino/paymentsF.js';
 import rankingFRoutes from './routes/femenino/rankingF.js';
+import fixtureRoutes from './routes/fixture.js';
 
 
 
@@ -38,6 +39,10 @@ app.use('/api/femenino/trainings', trainingsFRoutes);
 app.use('/api/femenino/attendance', attendanceFRoutes);
 app.use('/api/femenino/payments', paymentsFRoutes);
 app.use('/api/femenino/ranking', rankingFRoutes);
+
+// Rutas para el fixture
+app.use('/api/fixture', fixtureRoutes);
+
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`))
