@@ -80,6 +80,8 @@ function PlanillaMasculino() {
   // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
   const availableMonths = ALL_MONTH_NAMES.slice(0, currentActualMonthIndex + 1);
 
+  
+
   // --- Funciones de Fetch (GET) ---
   const fetchData = useCallback(async (monthIndex, suppressLoading = false) => {
     setRankingError(null);
@@ -162,6 +164,25 @@ function PlanillaMasculino() {
     }
   }, []);
 
+   // --- Efecto para cargar datos mensuales iniciales ---
+  useEffect(() => {
+    // Carga inicial o al cambiar de mes si no hay secciones especiales activas/cargando
+    if (
+      !showRanking &&
+      !showPaymentStatus &&
+      !loadingRanking &&
+      !loadingPaymentStatus
+    ) {
+      fetchData(selectedMonthIndex);
+    }
+  }, [
+    selectedMonthIndex,
+    fetchData,
+    showRanking,
+    showPaymentStatus,
+    loadingRanking,
+    loadingPaymentStatus,
+  ]);
   // --- Función Genérica para Acciones (POST) ---
   const performAction = useCallback(
     async (action, payload, showLoadingAlert = false) => {
@@ -323,26 +344,6 @@ function PlanillaMasculino() {
     }
   }, [selectedMonthIndex]);
 
-  // --- Efecto para cargar datos mensuales iniciales ---
-  useEffect(() => {
-    // Carga inicial o al cambiar de mes si no hay secciones especiales activas/cargando
-    if (
-      !showRanking &&
-      !showPaymentStatus &&
-      !loadingRanking &&
-      !loadingPaymentStatus
-    ) {
-      fetchData(selectedMonthIndex);
-    }
-  }, [
-    selectedMonthIndex,
-    fetchData,
-    showRanking,
-    showPaymentStatus,
-    loadingRanking,
-    loadingPaymentStatus,
-  ]);
-
   // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
 
   const handleAttendanceChange = useCallback(
@@ -429,43 +430,43 @@ function PlanillaMasculino() {
     [selectedMonthIndex, fetchData]
   );
 
-  const handleAddTraining = useCallback(async () => {
-    const { value: selectedDate } = await Swal.fire({
-      title: "Nueva Fecha de Entrenamiento",
-      input: "date",
-      inputLabel: "Seleccioná una fecha",
-      inputPlaceholder: "YYYY-MM-DD",
-      showCancelButton: true,
-      confirmButtonText: "Agregar",
-      cancelButtonText: "Cancelar",
-      inputValidator: (v) => (!v ? "Seleccioná una fecha" : null),
-    });
+const handleAddTraining = useCallback(async () => {
+  const { value: selectedDate } = await Swal.fire({
+    title: "Nueva Fecha de Entrenamiento",
+    input: "date",
+    inputLabel: "Seleccioná una fecha",
+    inputPlaceholder: "YYYY-MM-DD",
+    showCancelButton: true,
+    confirmButtonText: "Agregar",
+    cancelButtonText: "Cancelar",
+    inputValidator: (v) => (!v ? "Seleccioná una fecha" : null),
+  });
 
-    if (selectedDate) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/trainings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ date: selectedDate, is_suspended: false }),
-        });
+  if (selectedDate) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/trainings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: selectedDate, is_suspended: false }),
+      });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Error al agregar entrenamiento");
-        }
-
-        await fetchData(selectedMonthIndex);
-        Swal.fire("Listo", "Entrenamiento agregado", "success");
-      } catch (err) {
-        Swal.fire("Error", err.message, "error");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al agregar entrenamiento");
       }
+
+      await fetchData(selectedMonthIndex);
+      Swal.fire("Listo", "Entrenamiento agregado", "success");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
     }
-  }, [selectedMonthIndex, fetchData]);
+  }
+}, [selectedMonthIndex, fetchData]);
+
 
   const handleToggleSuspended = useCallback(
     async (dateIndex) => {
       const trainingId = trainingDates[dateIndex]?.id;
-      // Igual que antes, tiene que ser el objeto con `id`
       const currentValue = suspendedDates[dateIndex];
       const newValue = !currentValue;
 
@@ -489,8 +490,12 @@ function PlanillaMasculino() {
         setSuspendedDates(originalSuspendedDates);
         setMessage("");
       }
+      else {
+      // ✅ Refrescar toda la tabla para que se vea el cambio
+      await fetchData(selectedMonthIndex);
+    }
     },
-    [suspendedDates, trainingDates, performAction]
+     [suspendedDates, trainingDates, performAction, fetchData, selectedMonthIndex]
   );
 
   const handlePaymentChange = useCallback(
@@ -767,7 +772,6 @@ function PlanillaMasculino() {
               handleDeletePlayer={handleDeletePlayer}
               handleUpdatePlayerName={handleUpdatePlayerName}
               handleDeleteTraining={handleDeleteTraining}
-              handleAddTraining={handleAddTraining}
               isAuthenticated={isAuthenticated}
               isAuthorized={isAuthorized}
               isGuest={isGuest}

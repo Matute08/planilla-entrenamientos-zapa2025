@@ -1,5 +1,5 @@
 import React from "react";
-import { FaFutbol, FaBan } from "react-icons/fa";
+import { FaFutbol, FaBan, FaPlus } from "react-icons/fa";
 
 function MonthlyAttendanceTable({
     players,
@@ -12,7 +12,8 @@ function MonthlyAttendanceTable({
     handlePaymentChange,
     handleDeletePlayer,
     handleUpdatePlayerName,
-    handleDeleteTraining, // ✅ nuevo
+    handleDeleteTraining, 
+    handleAddTraining, 
     isAuthenticated,
     isAuthorized,
     isGuest,
@@ -40,62 +41,62 @@ function MonthlyAttendanceTable({
                                 </th>
                                 {trainingDates.map((training, index) => (
                                     <th
-                                        key={index}
-                                        className="px-4 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20"
-                                    >
-                                        <div className="flex flex-col items-center">
-                                            {/* Fecha */}
-                                            {(() => {
-                                                try {
-                                                    return new Date(
-                                                        training.date + "T00:00:00"
-                                                    ).toLocaleDateString("es-AR", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                    });
-                                                } catch {
-                                                    return training.date;
-                                                }
-                                            })()}
+  key={index}
+  className="px-4 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20"
+>
+  <div className="flex flex-col items-center space-y-1">
+    {/* Fecha */}
+    <span>
+      {(() => {
+        try {
+          return new Date(
+            training.date + "T00:00:00"
+          ).toLocaleDateString("es-AR", {
+            month: "short",
+            day: "numeric",
+          });
+        } catch {
+          return training.date;
+        }
+      })()}
+    </span>
 
-                                            {/* Suspender/activar */}
-                                            {isEditor && (
-                                                <button
-                                                    onClick={() => handleToggleSuspended(index)}
-                                                    title={
-                                                        suspendedDates[index]
-                                                            ? "Reactivar entrenamiento"
-                                                            : "Suspender entrenamiento"
-                                                    }
-                                                    disabled={!isEditor}
-                                                    className={`mt-1 px-1 py-0.5 text-xs rounded ${
-                                                        suspendedDates[index]
-                                                            ? "bg-green-500 hover:bg-green-600 text-stone-900"
-                                                            : "bg-red-500 hover:bg-red-600 text-white"
-                                                    } ${!isEditor ? "opacity-50 cursor-not-allowed" : ""}`}
-                                                >
-                                                    {suspendedDates[index] ? (
-                                                        <FaFutbol size=".7em" />
-                                                    ) : (
-                                                        <FaBan size=".7em" />
-                                                    )}
-                                                </button>
-                                            )}
+    {/* Botones en fila */}
+    {isEditor && (
+      <div className="flex flex-row items-center space-x-3">
+        <button
+          onClick={() => handleToggleSuspended(index)}
+          title={
+            suspendedDates[index]
+              ? "Reactivar entrenamiento"
+              : "Suspender entrenamiento"
+          }
+          disabled={!isEditor}
+          className={`px-1 py-0.5 text-xs rounded ${
+            suspendedDates[index]
+              ? "bg-green-500 hover:bg-green-600 text-stone-900"
+              : "bg-red-500 hover:bg-red-600 text-white"
+          } ${!isEditor ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          {suspendedDates[index] ? (
+            <FaFutbol size=".7em" />
+          ) : (
+            <FaBan size=".7em" />
+          )}
+        </button>
 
-                                            {/* Eliminar entrenamiento */}
-                                            {isEditor && (
-                                                <button
-                                                    onClick={() =>
-                                                        handleDeleteTraining(training.id, training.date)
-                                                    }
-                                                    title="Eliminar entrenamiento"
-                                                    className="mt-1 text-red-600 text-sm hover:text-red-800"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            )}
-                                        </div>
-                                    </th>
+        <button
+          onClick={() => handleDeleteTraining(training.id, training.date)}
+          title="Eliminar entrenamiento"
+          className="text-red-600 text-sm hover:text-red-800"
+        >
+          🗑️
+        </button>
+      </div>
+    )}
+  </div>
+</th>
+
                                 ))}
                                 <th className="px-6 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20">
                                     Pago ({months[selectedMonthIndex]})
