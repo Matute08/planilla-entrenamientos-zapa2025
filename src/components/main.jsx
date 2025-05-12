@@ -11,10 +11,7 @@ function Main() {
       <Route path="/planillaMasculino" element={<PlanillaMasculino />} />
       <Route path="/planillaFemenino" element={<PlanillaFemenino />} />
       <Route path="/fixture" element={<Fixture />} />
-      <Route
-        path="/fixture/cargar"
-        element={<FixtureForm onAdd={() => {}} />}
-      />
+      <Route path="/fixture/cargar" element={<FixtureForm />} />
     </Routes>
   );
 }
