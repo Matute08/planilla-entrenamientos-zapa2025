@@ -12,6 +12,7 @@ function MonthlyAttendanceTable({
     handlePaymentChange,
     handleDeletePlayer,
     handleUpdatePlayerName,
+    handleDeleteTraining, // ✅ nuevo
     isAuthenticated,
     isAuthorized,
     isGuest,
@@ -42,7 +43,8 @@ function MonthlyAttendanceTable({
                                         key={index}
                                         className="px-4 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20"
                                     >
-                                        <div>
+                                        <div className="flex flex-col items-center">
+                                            {/* Fecha */}
                                             {(() => {
                                                 try {
                                                     return new Date(
@@ -55,45 +57,44 @@ function MonthlyAttendanceTable({
                                                     return training.date;
                                                 }
                                             })()}
+
+                                            {/* Suspender/activar */}
+                                            {isEditor && (
+                                                <button
+                                                    onClick={() => handleToggleSuspended(index)}
+                                                    title={
+                                                        suspendedDates[index]
+                                                            ? "Reactivar entrenamiento"
+                                                            : "Suspender entrenamiento"
+                                                    }
+                                                    disabled={!isEditor}
+                                                    className={`mt-1 px-1 py-0.5 text-xs rounded ${
+                                                        suspendedDates[index]
+                                                            ? "bg-green-500 hover:bg-green-600 text-stone-900"
+                                                            : "bg-red-500 hover:bg-red-600 text-white"
+                                                    } ${!isEditor ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                >
+                                                    {suspendedDates[index] ? (
+                                                        <FaFutbol size=".7em" />
+                                                    ) : (
+                                                        <FaBan size=".7em" />
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {/* Eliminar entrenamiento */}
+                                            {isEditor && (
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteTraining(training.id, training.date)
+                                                    }
+                                                    title="Eliminar entrenamiento"
+                                                    className="mt-1 text-red-600 text-sm hover:text-red-800"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            )}
                                         </div>
-
-                                        {isEditor && (
-                                            <button
-                                                onClick={() => handleToggleSuspended(index)}
-                                                title={
-                                                    suspendedDates[index]
-                                                        ? "Reactivar entrenamiento"
-                                                        : "Suspender entrenamiento"
-                                                }
-                                                disabled={!isEditor}
-                                                className={`mt-1 px-1 py-0.5 text-xs rounded ${
-                                                    suspendedDates[index]
-                                                        ? "bg-green-500 hover:bg-green-600 text-stone-900"
-                                                        : "bg-red-500 hover:bg-red-600 text-white"
-                                                } ${!isEditor ? "opacity-50 cursor-not-allowed" : ""}`}
-                                            >
-                                                {suspendedDates[index] ? (
-                                                    <FaFutbol size=".7em" />
-                                                ) : (
-                                                    <FaBan size=".7em" />
-                                                )}
-                                            </button>
-                                        )}
-
-                                        {!isEditor && suspendedDates[index] && (
-                                            <FaBan
-                                                size=".7em"
-                                                className="text-gray-400 mx-auto mt-1"
-                                                title="Suspendido"
-                                            />
-                                        )}
-                                        {!isEditor && !suspendedDates[index] && (
-                                            <FaFutbol
-                                                size=".7em"
-                                                className="text-gray-400 mx-auto mt-1"
-                                                title="Activo"
-                                            />
-                                        )}
                                     </th>
                                 ))}
                                 <th className="px-6 py-3 text-center text-xs font-bold text-stone-950 uppercase tracking-wider sticky top-0 z-20">

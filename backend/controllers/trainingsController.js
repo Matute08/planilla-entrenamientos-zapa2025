@@ -17,18 +17,35 @@ export const getTrainings = async (req, res) => {
 // POST /api/trainings
 // body: { date, is_suspended (opcional) }
 export const createTraining = async (req, res) => {
-  const { date, is_suspended = false } = req.body
+  const { date, is_suspended = false } = req.body;
 
-  if (!date) return res.status(400).json({ error: 'La fecha es obligatoria' })
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: "Fecha inválida (YYYY-MM-DD esperada)" });
+  }
 
   const { data, error } = await supabase
     .from('trainings')
     .insert([{ date, is_suspended }])
-    .select()
+    .select();
 
-  if (error) return res.status(500).json({ error: error.message })
-  res.status(201).json({ message: 'Entrenamiento creado', data })
-}
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data[0]);
+};
+
+
+export const deleteTraining = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) return res.status(400).json({ error: 'Falta el ID del entrenamiento' });
+
+  const { error } = await supabase
+    .from('trainings')
+    .delete()
+    .eq('id', id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: 'Entrenamiento eliminado correctamente' });
+};
 
 export const toggleSuspension = async (req, res) => {
   const { id } = req.params
