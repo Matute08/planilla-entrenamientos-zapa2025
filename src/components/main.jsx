@@ -3,7 +3,7 @@ import PlanillaMasculino from "./planilla";
 import PlanillaFemenino from "./planillaFem";
 import Home from "./home";
 import Fixture from "./fixture";
-import FixtureForm from "./fixtureForm";
+import FixtureCrear from "./fixtureForm";
 function Main() {
   return (
     <Routes>
@@ -11,7 +11,7 @@ function Main() {
       <Route path="/planillaMasculino" element={<PlanillaMasculino />} />
       <Route path="/planillaFemenino" element={<PlanillaFemenino />} />
       <Route path="/fixture" element={<Fixture />} />
-      <Route path="/fixture/cargar" element={<FixtureForm />} />
+      <Route path="/fixture/cargar" element={<FixtureCrear />} />
     </Routes>
   );
 }
