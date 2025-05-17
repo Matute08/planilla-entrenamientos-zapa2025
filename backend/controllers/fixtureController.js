@@ -31,4 +31,19 @@ export const getFixtureSolapados = async (req, res) => {
   res.json(data);
 };
 
+export const deleteFixtureByEtapas = async (req, res) => {
+  const { etapas } = req.body;
+  if (!etapas || !Array.isArray(etapas) || etapas.length === 0) {
+    return res.status(400).json({ error: 'Se debe proporcionar una lista de etapas a eliminar.' });
+  }
+
+  const { error } = await supabase
+    .from('fixture')
+    .delete()
+    .in('etapa', etapas);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: 'Partidos eliminados correctamente.' });
+};
+
 
