@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function Navbar({
   onAddPlayer,
@@ -14,7 +14,14 @@ function Navbar({
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [trainingDropdownOpen, setTrainingDropdownOpen] = React.useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const actionButtonsDisabled = !isEditor || isLoadingAnything;
+  
+  // Detectar si estamos en las pantallas de asistencias (planilla)
+  const isInAttendanceScreen = location.pathname === "/planillaMasculino" || location.pathname === "/planillaFemenino";
+  
+  // El dropdown solo debe estar habilitado si es editor Y está en pantalla de asistencias
+  const isDropdownEnabled = isEditor && isInAttendanceScreen && !isLoadingAnything;
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,19 +46,20 @@ function Navbar({
           Inicio
         </button>
       </div>
-      {/* Botón Opciones (deshabilitado si no es editor) */}
+      {/* Botón Opciones (deshabilitado si no es editor o no está en pantalla de asistencias) */}
       <div className="relative inline-block text-left">
         <button
           className={`text-lg bg-primary borderprimary border rounded-full inline-flex items-center justify-center py-3 px-3 text-center text-white hover:bg-[#464749] hover:border[#464749] active:bg-[#464749] active:border-[#464749] transition duration-150 ease-in-out ${
-            actionButtonsDisabled
+            !isDropdownEnabled
               ? "opacity-50 cursor-not-allowed bg-gray-500 border-gray-500 hover:bg-gray-500"
               : ""
           }`}
           onClick={() =>
-            actionButtonsDisabled ? null : setDropdownOpen(!dropdownOpen)
+            isDropdownEnabled ? setDropdownOpen(!dropdownOpen) : null
           } // No abrir si está deshabilitado
-          disabled={actionButtonsDisabled} // Deshabilitar botón
-          aria-disabled={actionButtonsDisabled}
+          disabled={!isDropdownEnabled} // Deshabilitar botón
+          aria-disabled={!isDropdownEnabled}
+          title={!isInAttendanceScreen ? "Opciones solo disponibles en pantalla de asistencias" : ""}
         >
           Opciones
           <svg
@@ -70,7 +78,7 @@ function Navbar({
           </svg>
         </button>
 
-        {dropdownOpen && isEditor && (
+        {dropdownOpen && isDropdownEnabled && (
           <div className="absolute right-0 mt-2 w-50 bg-white border font-bold border-gray-200 rounded-xl shadow-lg z-50">
             <button
               className="block w-full px-4 py-2 text-left text-black text-sm font-medium hover:bg-blue-100 transition duration-150 ease-in-out"
