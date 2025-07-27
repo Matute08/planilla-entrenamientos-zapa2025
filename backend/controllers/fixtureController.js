@@ -46,4 +46,34 @@ export const deleteFixtureByEtapas = async (req, res) => {
   res.json({ message: 'Partidos eliminados correctamente.' });
 };
 
+export const deleteFixtureItem = async (req, res) => {
+  const { id } = req.params;
+  
+  if (!id) {
+    return res.status(400).json({ error: 'Se debe proporcionar un ID de partido.' });
+  }
+
+  const { error } = await supabase
+    .from('fixture')
+    .delete()
+    .eq('id', id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: 'Partido eliminado correctamente.' });
+};
+
+export const updateFixtureItem = async (req, res) => {
+  const { id } = req.params;
+  const { rival, hora_inicio, cancha, observaciones } = req.body;
+
+  const { data, error } = await supabase
+    .from('fixture')
+    .update({ rival, hora_inicio, cancha, observaciones })
+    .eq('id', id)
+    .select();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+};
+
 

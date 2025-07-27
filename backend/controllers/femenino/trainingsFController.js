@@ -4,7 +4,13 @@ export const getTrainingsF = async (req, res) => {
   const { month } = req.query;
 
   let query = supabase.from('trainings_femenino').select('*');
-  if (month !== undefined) query = query.eq('month', parseInt(month));
+  if (month !== undefined) {
+    // Filtrar por mes usando la fecha
+    const currentYear = new Date().getFullYear()
+    const startDate = new Date(currentYear, parseInt(month), 1).toISOString().split('T')[0]
+    const endDate = new Date(currentYear, parseInt(month) + 1, 0).toISOString().split('T')[0]
+    query = query.gte('date', startDate).lte('date', endDate)
+  }
 
   const { data, error } = await query.order('date', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
@@ -14,6 +20,10 @@ export const getTrainingsF = async (req, res) => {
 
 export const createTrainingF = async (req, res) => {
   const { date, is_suspended = false } = req.body;
+
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: "Fecha inválida (YYYY-MM-DD esperada)" });
+  }
 
   const { data, error } = await supabase
     .from('trainings_femenino')

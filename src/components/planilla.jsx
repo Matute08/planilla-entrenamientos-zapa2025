@@ -59,9 +59,12 @@ function PlanillaMasculino() {
 
   const [players, setPlayers] = useState([]);
   const [trainingDates, setTrainingDates] = useState([]);
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(
-    new Date().getMonth()
-  );
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => {
+    const currentMonth = new Date().getMonth();
+    const julyIndex = 6; // Julio es el índice 6 (0-based)
+    // Si estamos en un mes anterior a julio, seleccionar julio
+    return Math.max(currentMonth, julyIndex);
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
@@ -76,11 +79,27 @@ function PlanillaMasculino() {
   const [suspendedDates, setSuspendedDates] = useState([]);
   // Derivar los meses disponibles para el dropdown
   const currentActualMonthIndex = new Date().getMonth();
+  const julyIndex = 6; // Julio es el índice 6 (0-based)
 
-  // Crea un nuevo array con los meses desde Enero hasta el mes actual inclusive
-  const availableMonths = ALL_MONTH_NAMES.slice(0, currentActualMonthIndex + 1);
+  // Crea un nuevo array con los meses desde Julio hasta el mes actual inclusive
+  // Si estamos en un mes anterior a julio, solo mostrar julio en adelante
+  const startMonthIndex = Math.max(julyIndex, 0);
+  const endMonthIndex = Math.max(currentActualMonthIndex, julyIndex);
+  const availableMonths = ALL_MONTH_NAMES.slice(startMonthIndex, endMonthIndex + 1);
+
+  // Convertir el índice absoluto a índice relativo para el dropdown
+  const getRelativeMonthIndex = (absoluteIndex) => {
+    return Math.max(0, absoluteIndex - startMonthIndex);
+  };
+
+  // Convertir el índice relativo del dropdown a índice absoluto
+  const getAbsoluteMonthIndex = (relativeIndex) => {
+    return relativeIndex + startMonthIndex;
+  };
 
   
+
+
 
   // --- Funciones de Fetch (GET) ---
   const fetchData = useCallback(async (monthIndex, suppressLoading = false) => {
@@ -133,7 +152,7 @@ function PlanillaMasculino() {
           const record = attendanceData.find(
             (a) => a.player_id === player.id && a.training_id === training.id
           );
-          return record ? record.present : false;
+          return record ? record.status : 'absent';
         });
 
         const pago = paymentsData.find(
@@ -211,14 +230,15 @@ function PlanillaMasculino() {
 
         switch (action) {
           case "attendance":
+            const attendancePayload = {
+              player_id: payload.playerId,
+              training_id: payload.trainingId,
+              status: payload.value,
+            };
             response = await fetch(`${API_BASE_URL}/attendance`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                player_id: payload.playerId,
-                training_id: payload.trainingId,
-                present: payload.value,
-              }),
+              body: JSON.stringify(attendancePayload),
             });
             break;
 
@@ -347,7 +367,7 @@ function PlanillaMasculino() {
   // --- Manejadores de Eventos (se mantienen aquí y se pasan como props) ---
 
   const handleAttendanceChange = useCallback(
-    async (playerId, dateIndex) => {
+    async (playerId, dateIndex, newStatus) => {
       if (suspendedDates[dateIndex]) {
         setMessage("Día suspendido.");
         return;
@@ -361,12 +381,14 @@ function PlanillaMasculino() {
       const playerIndex = originalPlayers.findIndex((p) => p.id === playerId);
       if (playerIndex === -1) return;
 
-      const previousValue = originalPlayers[playerIndex].attendance[dateIndex];
-      const newValue =
-        typeof previousValue === "boolean" ? !previousValue : true;
-
       const trainingId = trainingDates[dateIndex]?.id;
-      // Ahora cada fecha en `trainingDates` es un objeto con `id`
+      
+      // Validar que tenemos todos los datos necesarios
+      if (!trainingId) {
+        console.error("Training ID no encontrado para dateIndex:", dateIndex, "trainingDates:", trainingDates);
+        setMessage("Error: No se pudo identificar el entrenamiento");
+        return;
+      }
 
       setPlayers((prevPlayers) =>
         prevPlayers.map((p) =>
@@ -374,7 +396,7 @@ function PlanillaMasculino() {
             ? {
                 ...p,
                 attendance: p.attendance.map((att, idx) =>
-                  idx === dateIndex ? newValue : att
+                  idx === dateIndex ? newStatus : att
                 ),
               }
             : p
@@ -384,7 +406,7 @@ function PlanillaMasculino() {
       setMessage("Guardando asistencia...");
       const successResult = await performAction(
         "attendance",
-        { playerId, trainingId, value: newValue },
+        { playerId, trainingId, value: newStatus },
         false
       );
 
@@ -529,8 +551,9 @@ const handleAddTraining = useCallback(async () => {
   );
 
   const handleMonthChange = (event) => {
-    const newMonthIndex = parseInt(event.target.value, 10);
-    setSelectedMonthIndex(newMonthIndex);
+    const relativeIndex = parseInt(event.target.value, 10);
+    const absoluteIndex = getAbsoluteMonthIndex(relativeIndex);
+    setSelectedMonthIndex(absoluteIndex);
     setShowRanking(false);
     setRankingError(null);
     setRankingData(null);
@@ -708,7 +731,7 @@ const handleAddTraining = useCallback(async () => {
       <main className="flex-grow overflow-auto p-4">
         {/* Componente de Controles */}
         <Controls
-          selectedMonthIndex={selectedMonthIndex}
+          selectedMonthIndex={getRelativeMonthIndex(selectedMonthIndex)}
           handleMonthChange={handleMonthChange}
           fetchRankingData={fetchRankingData}
           fetchPaymentStatusData={fetchPaymentStatusData}

@@ -42,6 +42,7 @@ export const upsertPayment = async (req, res) => {
 // GET /api/payments/pendings
 export const getPendingPayments = async (req, res) => {
   const year = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
 
   try {
     // 1. Traer todos los jugadores
@@ -57,9 +58,18 @@ export const getPendingPayments = async (req, res) => {
       .eq('year', year);
     if (errorPayments) throw errorPayments;
 
-    // 3. Generar lista de meses 0 a actual (no incluir futuros)
-    const currentMonth = new Date().getMonth();
-    const monthsToCheck = Array.from({ length: currentMonth + 1 }, (_, i) => i);
+    // 3. Generar lista de meses del semestre (Julio a Noviembre)
+    // Julio = 6, Agosto = 7, Septiembre = 8, Octubre = 9, Noviembre = 10
+    const julyIndex = 6;
+    const novemberIndex = 10;
+    
+    // Solo considerar meses desde julio hasta el mes actual (o noviembre si estamos después)
+    const endMonth = Math.min(currentMonth, novemberIndex);
+    const monthsToCheck = [];
+    
+    for (let i = julyIndex; i <= endMonth; i++) {
+      monthsToCheck.push(i);
+    }
 
     // 4. Calcular deudas por jugador
     const resultados = players.map(player => {

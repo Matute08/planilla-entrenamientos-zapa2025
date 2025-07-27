@@ -16,17 +16,30 @@ export const getAttendance = async (req, res) => {
 }
 
 // POST /api/attendance
-// body: { player_id, training_id, present }
+// body: { player_id, training_id, status } donde status puede ser 'absent', 'present', 'attended_no_trained'
 export const upsertAttendance = async (req, res) => {
-  const { player_id, training_id, present } = req.body
+  const { player_id, training_id, status } = req.body
 
-  if (!player_id || !training_id || present === undefined) {
-    return res.status(400).json({ error: 'Datos incompletos' })
+  // Validación más específica
+  if (!player_id) {
+    return res.status(400).json({ error: 'player_id es requerido' })
+  }
+  if (!training_id) {
+    return res.status(400).json({ error: 'training_id es requerido' })
+  }
+  if (!status) {
+    return res.status(400).json({ error: 'status es requerido' })
+  }
+
+  // Validar que el status sea válido
+  const validStatuses = ['absent', 'present', 'attended_no_trained']
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido. Debe ser: absent, present, o attended_no_trained' })
   }
 
   const { data, error } = await supabase
     .from('attendance')
-    .upsert([{ player_id, training_id, present }], { onConflict: ['player_id', 'training_id'] })
+    .upsert([{ player_id, training_id, status }], { onConflict: ['player_id', 'training_id'] })
 
   if (error) return res.status(500).json({ error: error.message })
   res.json({ message: 'Asistencia registrada', data })

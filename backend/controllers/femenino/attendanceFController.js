@@ -14,11 +14,28 @@ export const getAttendanceF = async (req, res) => {
 };
 
 export const upsertAttendanceF = async (req, res) => {
-  const { player_id, training_id, present } = req.body;
+  const { player_id, training_id, status } = req.body;
+
+  // Validación más específica
+  if (!player_id) {
+    return res.status(400).json({ error: 'player_id es requerido' });
+  }
+  if (!training_id) {
+    return res.status(400).json({ error: 'training_id es requerido' });
+  }
+  if (!status) {
+    return res.status(400).json({ error: 'status es requerido' });
+  }
+
+  // Validar que el status sea válido
+  const validStatuses = ['absent', 'present', 'attended_no_trained'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido. Debe ser: absent, present, o attended_no_trained' });
+  }
 
   const { data, error } = await supabase
     .from('attendance_femenino')
-    .upsert([{ player_id, training_id, present }], { onConflict: ['player_id', 'training_id'] });
+    .upsert([{ player_id, training_id, status }], { onConflict: ['player_id', 'training_id'] });
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ message: 'Asistencia registrada', data });

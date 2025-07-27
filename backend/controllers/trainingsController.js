@@ -5,8 +5,13 @@ export const getTrainings = async (req, res) => {
   const { month, year } = req.query
   let query = supabase.from('trainings').select('*')
 
-  if (month) query = query.eq('month', parseInt(month))
-  // podrías agregar filtro por año si lo almacenás (de momento usamos solo mes)
+  if (month !== undefined) {
+    // Filtrar por mes usando la fecha
+    const currentYear = new Date().getFullYear()
+    const startDate = new Date(currentYear, parseInt(month), 1).toISOString().split('T')[0]
+    const endDate = new Date(currentYear, parseInt(month) + 1, 0).toISOString().split('T')[0]
+    query = query.gte('date', startDate).lte('date', endDate)
+  }
 
   const { data, error } = await query.order('date', { ascending: true })
 

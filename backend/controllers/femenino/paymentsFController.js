@@ -32,32 +32,48 @@ export const upsertPaymentF = async (req, res) => {
 
 export const getPendingPaymentsF = async (req, res) => {
   const year = new Date().getFullYear();
-
-  const { data: players, error: e1 } = await supabase.from('players_femenino').select('id, name');
-  if (e1) return res.status(500).json({ error: e1.message });
-
-  const { data: payments, error: e2 } = await supabase
-    .from('payments_femenino')
-    .select('player_id, month, paid')
-    .eq('year', year);
-  if (e2) return res.status(500).json({ error: e2.message });
-
   const currentMonth = new Date().getMonth();
-  const monthsToCheck = Array.from({ length: currentMonth + 1 }, (_, i) => i);
 
-  const resultados = players.map(player => {
-    const pagosJugador = payments.filter(p => p.player_id === player.id);
-    const owedMonths = monthsToCheck.filter(m => {
-      const pago = pagosJugador.find(p => p.month === m);
-      return !pago || !pago.paid;
+  try {
+    const { data: players, error: e1 } = await supabase.from('players_femenino').select('id, name');
+    if (e1) return res.status(500).json({ error: e1.message });
+
+    const { data: payments, error: e2 } = await supabase
+      .from('payments_femenino')
+      .select('player_id, month, paid')
+      .eq('year', year);
+    if (e2) return res.status(500).json({ error: e2.message });
+
+    // Generar lista de meses del semestre (Julio a Noviembre)
+    // Julio = 6, Agosto = 7, Septiembre = 8, Octubre = 9, Noviembre = 10
+    const julyIndex = 6;
+    const novemberIndex = 10;
+    
+    // Solo considerar meses desde julio hasta el mes actual (o noviembre si estamos después)
+    const endMonth = Math.min(currentMonth, novemberIndex);
+    const monthsToCheck = [];
+    
+    for (let i = julyIndex; i <= endMonth; i++) {
+      monthsToCheck.push(i);
+    }
+
+    const resultados = players.map(player => {
+      const pagosJugador = payments.filter(p => p.player_id === player.id);
+      const owedMonths = monthsToCheck.filter(m => {
+        const pago = pagosJugador.find(p => p.month === m);
+        return !pago || !pago.paid;
+      });
+
+      return {
+        name: player.name,
+        owedCount: owedMonths.length,
+        owedMonths: owedMonths.map(i => ALL_MONTH_NAMES[i])
+      };
     });
 
-    return {
-      name: player.name,
-      owedCount: owedMonths.length,
-      owedMonths: owedMonths.map(i => ALL_MONTH_NAMES[i])
-    };
-  });
-
-  res.json(resultados.filter(r => r.owedCount > 0));
+    res.json(resultados.filter(r => r.owedCount > 0));
+  } catch (err) {
+    console.error("Error en pagos pendientes femenino:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 };

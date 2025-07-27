@@ -10,7 +10,7 @@ function PaymentStatusSection({
     <div className="my-6 p-4 bg-white bg-opacity-90 text-black rounded-lg shadow-lg border border-gray-300 relative">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-stone-950">
-          Estado General de Pagos Pendientes
+          Pagos Pendientes del Semestre 
         </h2>
         <button
           onClick={onClose}
@@ -41,21 +41,21 @@ function PaymentStatusSection({
                     Nombre
                   </th>
                   <th className="px-4 py-2 text-center text-xs font-bold text-stone-950 uppercase tracking-wider">
-                    Meses Adeudados (Cant.)
+                    Cuotas Pendientes
                   </th>
                   <th className="px-4 py-2 text-center text-xs font-bold text-stone-950 uppercase tracking-wider">
-                    Meses Adeudados (Lista)
+                    Meses Adeudados
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paymentStatusData.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={index} className="hover:bg-red-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {item.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {item.owedCount ?? "-"}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-red-600">
+                      {item.owedCount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.owedMonths?.join(", ") || "-"}
@@ -71,7 +71,7 @@ function PaymentStatusSection({
         paymentStatusData.length === 0 &&
         !paymentStatusError && (
           <p className="text-center text-green-700 mt-4 font-semibold">
-            ¡Todos los jugadores están al día con sus pagos!
+            ¡Todos los jugadores están al día con sus pagos del semestre!
           </p>
         )}
     </div>

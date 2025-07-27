@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaUserSlash } from 'react-icons/fa';
 
 // Componente para mostrar la sección de Ranking
 function RankingSection({ rankingData, rankingError, onClose }) {
@@ -10,8 +11,12 @@ function RankingSection({ rankingData, rankingError, onClose }) {
                 <h2 className="text-xl font-semibold text-stone-950">Ranking General de Asistencia</h2>
                 <button onClick={onClose} className="absolute top-2 right-2 text-gray-600 hover:text-red-700 text-2xl font-bold focus:outline-none" aria-label="Cerrar ranking"> &times; </button>
             </div>
+            
+            
+
             {/* Muestra error si existe */}
             {rankingError && <p className="text-center text-red-700"><strong>Error:</strong> {rankingError}</p>}
+            
             {/* Muestra tabla si hay datos y no hay error */}
             {rankingData && rankingData.length > 0 && !rankingError && (
                 <div className="overflow-x-auto">
@@ -30,7 +35,16 @@ function RankingSection({ rankingData, rankingError, onClose }) {
                                 <tr key={player.name + index} className="hover:bg-purple-50">
                                     <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{player.name}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-green-700 font-semibold text-center">{player.attended}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center">
+                                        <span className="text-green-700 font-semibold">{player.totalAttended}</span>
+                                        {player.attendedNoTrained > 0 && (
+                                            <span className="text-orange-600 text-xs block flex items-center justify-center gap-1">
+                                                ({player.trained}✅ + {player.attendedNoTrained}
+                                                <FaUserSlash className="text-orange-600" />
+                                                )
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-red-700 font-semibold text-center">{player.missed}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-center">{player.totalTrainings}</td>
                                 </tr>
