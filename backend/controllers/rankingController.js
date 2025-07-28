@@ -30,15 +30,18 @@ export const getRanking = async (req, res) => {
       const asistencias = attendance.filter((a) => a.player_id === player.id);
       const trained = asistencias.filter((a) => a.status === 'present').length;
       const attendedNoTrained = asistencias.filter((a) => a.status === 'attended_no_trained').length;
-      const missed = asistencias.filter((a) => a.status === 'absent').length;
       const totalAttended = trained + attendedNoTrained;
+      
+      // Calcular ausencias: total de entrenamientos - total de asistencias
+      // Esto incluye tanto ausencias registradas como ausencias por defecto
+      const missed = totalTrainings - totalAttended;
 
       return {
         name: player.name,
         trained, // Asistencias con entrenamiento
         attendedNoTrained, // Asistencias sin entrenamiento
         totalAttended, // Total de asistencias
-        missed, // Faltas
+        missed, // Faltas (incluye ausencias por defecto)
         totalTrainings // Total de entrenamientos realizados
       };
     });
