@@ -43,6 +43,24 @@ app.use('/api/femenino/ranking', rankingFRoutes);
 // Rutas para el fixture
 app.use('/api/fixture', fixtureRoutes);
 
+// Endpoint de ping para mantener el servidor activo
+app.get('/api/ping', (req, res) => {
+  res.status(200).json({ 
+    message: 'pong', 
+    timestamp: new Date().toISOString(),
+    status: 'active'
+  });
+});
+
+// Endpoint de health check más detallado
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
