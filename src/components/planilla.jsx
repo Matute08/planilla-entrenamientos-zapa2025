@@ -61,9 +61,9 @@ function PlanillaMasculino() {
   const [trainingDates, setTrainingDates] = useState([]);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => {
     const currentMonth = new Date().getMonth();
-    const julyIndex = 6; // Julio es el índice 6 (0-based)
-    // Si estamos en un mes anterior a julio, seleccionar julio
-    return Math.max(currentMonth, julyIndex);
+    const juneIndex = 5; // Junio es el índice 5 (0-based)
+    // Si estamos en un mes anterior a junio, seleccionar junio
+    return Math.max(currentMonth, juneIndex);
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -79,12 +79,12 @@ function PlanillaMasculino() {
   const [suspendedDates, setSuspendedDates] = useState([]);
   // Derivar los meses disponibles para el dropdown
   const currentActualMonthIndex = new Date().getMonth();
-  const julyIndex = 6; // Julio es el índice 6 (0-based)
+  const juneIndex = 5; // Junio es el índice 5 (0-based)
 
-  // Crea un nuevo array con los meses desde Julio hasta el mes actual inclusive
-  // Si estamos en un mes anterior a julio, solo mostrar julio en adelante
-  const startMonthIndex = Math.max(julyIndex, 0);
-  const endMonthIndex = Math.max(currentActualMonthIndex, julyIndex);
+  // Crea un nuevo array con los meses desde Junio hasta el mes actual inclusive
+  // Si estamos en un mes anterior a junio, solo mostrar junio en adelante
+  const startMonthIndex = Math.max(juneIndex, 0);
+  const endMonthIndex = Math.max(currentActualMonthIndex, juneIndex);
   const availableMonths = ALL_MONTH_NAMES.slice(startMonthIndex, endMonthIndex + 1);
 
   // Convertir el índice absoluto a índice relativo para el dropdown
